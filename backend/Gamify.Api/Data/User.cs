@@ -1,0 +1,12 @@
+namespace Gamify.Api.Data;
+
+public sealed class User
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string NormalizedEmail { get; set; } = "";
+    public string PasswordHash { get; set; } = "";
+    public string? PcLevel { get; set; }
+    public List<Platform> Platforms { get; set; } = [];
+}
