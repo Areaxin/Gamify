@@ -8,5 +8,7 @@ public sealed class User
     public string NormalizedEmail { get; set; } = "";
     public string PasswordHash { get; set; } = "";
     public string? PcLevel { get; set; }
+    public DateOnly? BirthDate { get; set; }
     public List<Platform> Platforms { get; set; } = [];
+    public List<GroupMember> GroupMembers { get; set; } = [];
 }

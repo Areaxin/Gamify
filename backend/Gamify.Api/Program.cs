@@ -84,6 +84,9 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "local",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1) }));
+    options.AddPolicy("recommendations", context => RateLimitPartition.GetFixedWindowLimiter(
+        JwtSessions.TryReadClaims(context.User, out var userId, out _) ? userId.ToString() : "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 12, Window = TimeSpan.FromMinutes(1) }));
 });
 
 var connectionString = builder.Configuration.GetConnectionString("Gamify")
@@ -113,9 +116,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
-app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();

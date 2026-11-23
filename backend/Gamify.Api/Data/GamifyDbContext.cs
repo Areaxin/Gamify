@@ -7,6 +7,7 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
     public DbSet<User> Users => Set<User>();
     public DbSet<Platform> Platforms => Set<Platform>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
+    public DbSet<Game> Games => Set<Game>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -18,9 +19,14 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
 
         modelBuilder.Entity<Platform>().HasData(
             new Platform { Id = Platform.PcId, Name = "PC" },
-            new Platform { Id = 2, Name = "PlayStation" },
-            new Platform { Id = 3, Name = "Xbox" },
-            new Platform { Id = 4, Name = "Switch" });
+            new Platform { Id = Platform.PlayStationId, Name = "PlayStation" },
+            new Platform { Id = Platform.XboxId, Name = "Xbox" },
+            new Platform { Id = Platform.SwitchId, Name = "Switch" });
+
+        modelBuilder.Entity<User>().HasMany(user => user.GroupMembers).WithOne()
+            .HasForeignKey(member => member.UserId);
+
+        GameCatalog.Seed(modelBuilder);
 
         modelBuilder.Entity<UserSession>().HasOne<User>().WithMany()
             .HasForeignKey(session => session.UserId);

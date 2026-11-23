@@ -11,7 +11,7 @@ namespace Gamify.Api.Controllers;
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class ProfileController(GamifyDbContext db) : ControllerBase
 {
-    private static readonly string[] PcLevels = ["Žemas", "Vidutinis", "Aukštas"];
+    private const int MaxGroupMembers = 11;
 
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken cancellationToken)
@@ -20,6 +20,7 @@ public sealed class ProfileController(GamifyDbContext db) : ControllerBase
             return Unauthorized();
 
         var user = await db.Users.AsNoTracking().Include(user => user.Platforms)
+            .Include(user => user.GroupMembers).AsSplitQuery()
             .SingleOrDefaultAsync(user => user.Id == userId, cancellationToken);
 
         return user is null ? Unauthorized() : Ok(ProfileResponse.From(user));
@@ -29,7 +30,7 @@ public sealed class ProfileController(GamifyDbContext db) : ControllerBase
     public async Task<IActionResult> GetOptions(CancellationToken cancellationToken)
     {
         var platforms = await db.Platforms.AsNoTracking().OrderBy(platform => platform.Id).ToListAsync(cancellationToken);
-        return Ok(new { platforms, pcLevels = PcLevels });
+        return Ok(new { platforms, pcLevels = PcSpecs.Levels, maxGroupMembers = MaxGroupMembers });
     }
 
     [HttpPut]
@@ -47,8 +48,16 @@ public sealed class ProfileController(GamifyDbContext db) : ControllerBase
             return BadRequest(new { message = "Pasirinkite bent vieną platformą." });
 
         var pcLevel = request.PcLevel?.Trim();
-        if (platformIds.Contains(Platform.PcId) && !PcLevels.Contains(pcLevel))
+        if (platformIds.Contains(Platform.PcId) && PcSpecs.Rank(pcLevel) == 0)
             return BadRequest(new { message = "Pasirinkite PC specifikacijų lygį." });
+
+        var today = AgeRatings.Today;
+        if (request.BirthDate is { } birthDate && !AgeRatings.IsValid(birthDate, today))
+            return BadRequest(new { message = "Įveskite galiojančią gimimo datą." });
+        if (request.GroupBirthDates is { Length: > MaxGroupMembers })
+            return BadRequest(new { message = "Galite pridėti iki 11 grupės narių." });
+        if (request.GroupBirthDates?.Any(date => !AgeRatings.IsValid(date, today)) == true)
+            return BadRequest(new { message = "Įveskite galiojančias grupės narių gimimo datas." });
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         var platforms = await db.Platforms.Where(platform => platformIds.Contains(platform.Id))
@@ -56,14 +65,27 @@ public sealed class ProfileController(GamifyDbContext db) : ControllerBase
         if (platforms.Count != platformIds.Length)
             return BadRequest(new { message = "Pasirinkta nežinoma platforma." });
 
-        var user = await db.Users.Include(user => user.Platforms)
+        var user = await db.Users.Include(user => user.Platforms).Include(user => user.GroupMembers).AsSplitQuery()
             .SingleOrDefaultAsync(user => user.Id == userId, cancellationToken);
         if (user is null)
             return Unauthorized();
 
+        if (user.BirthDate is { } savedDate && request.BirthDate is { } newDate && savedDate != newDate)
+            return BadRequest(new { message = "Išsaugotos gimimo datos pakeisti negalima." });
+
         user.Name = name;
         user.PcLevel = platformIds.Contains(Platform.PcId) ? pcLevel : null;
         user.Platforms = platforms;
+        user.BirthDate ??= request.BirthDate;
+        if (request.GroupBirthDates is { } groupDates)
+        {
+            if (user.BirthDate is null && groupDates.Length > 0)
+                return BadRequest(new { message = "Prieš pridėdami grupės narius įrašykite savo gimimo datą." });
+
+            var savedGroupDates = user.GroupMembers.OrderBy(member => member.Id).Select(member => member.BirthDate);
+            if (!savedGroupDates.SequenceEqual(groupDates))
+                user.GroupMembers = groupDates.Select(date => new GroupMember { BirthDate = date }).ToList();
+        }
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
@@ -71,10 +93,26 @@ public sealed class ProfileController(GamifyDbContext db) : ControllerBase
     }
 }
 
-public sealed record UpdateProfileRequest(string? Name, int[]? PlatformIds, string? PcLevel);
+public sealed record UpdateProfileRequest(
+    string? Name, int[]? PlatformIds, string? PcLevel, DateOnly? BirthDate, DateOnly[]? GroupBirthDates);
 
-public sealed record ProfileResponse(string Name, string Email, int[] PlatformIds, string? PcLevel)
+public sealed record ProfileResponse(
+    string Name, string Email, int[] PlatformIds, string? PcLevel, DateOnly? BirthDate,
+    DateOnly[] GroupBirthDates, AgeRatings? AgeRating, AgeRatings? GroupAgeRating)
 {
-    public static ProfileResponse From(User user) =>
-        new(user.Name, user.Email, user.Platforms.Select(platform => platform.Id).Order().ToArray(), user.PcLevel);
+    public static ProfileResponse From(User user)
+    {
+        var groupBirthDates = user.GroupMembers.OrderBy(member => member.Id).Select(member => member.BirthDate).ToArray();
+        var today = AgeRatings.Today;
+        AgeRatings? ageRating = null;
+        AgeRatings? groupAgeRating = null;
+        if (user.BirthDate is { } birthDate)
+        {
+            ageRating = AgeRatings.ForAge(AgeRatings.AgeOn(birthDate, today));
+            if (groupBirthDates.Length > 0)
+                groupAgeRating = AgeRatings.ForAge(AgeRatings.AgeOn(groupBirthDates.Append(birthDate).Max(), today));
+        }
+        return new(user.Name, user.Email, user.Platforms.Select(platform => platform.Id).Order().ToArray(), user.PcLevel,
+            user.BirthDate, groupBirthDates, ageRating, groupAgeRating);
+    }
 }

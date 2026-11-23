@@ -70,11 +70,11 @@ form {
   gap: 1rem;
 }
 
-input, select, button {
+input, select, textarea, button {
   font: inherit;
 }
 
-input:not([type="checkbox"]), select {
+input:not([type="checkbox"]), select, textarea {
   box-sizing: border-box;
   width: 100%;
   padding: 0.55rem 0.7rem;
@@ -86,6 +86,10 @@ input:not([type="checkbox"]), select {
 
 input[readonly] {
   background: #f3f5fa;
+}
+
+textarea {
+  resize: vertical;
 }
 
 fieldset {
@@ -132,6 +136,46 @@ button:disabled {
 
 form p, .auth-panel > p:last-child {
   margin-bottom: 0;
+}
+
+.field-note {
+  margin: 0;
+  color: #505d70;
+  font-size: 0.9rem;
+}
+
+.group-fields, .recommendations ul {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.group-member {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.recommendations {
+  margin-top: 1.5rem;
+}
+
+.recommendations h2 {
+  margin-bottom: 0.25rem;
+  font-size: 1.15rem;
+}
+
+.recommendations ul {
+  padding: 0;
+  list-style: none;
+}
+
+.recommendations li {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid #dce2ed;
+  border-radius: 0.4rem;
 }
 
 footer {

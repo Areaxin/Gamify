@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import AuthForm from './AuthForm'
 import Profile from './Profile'
+import Recommendations from './Recommendations'
 import { api, errorMessage } from './api'
 import './style.css'
 
@@ -117,10 +118,7 @@ function App() {
         ) : (
           <Routes>
             <Route path="/" element={user ? (
-              <section className="panel">
-                <h1>Sveiki, {user.name}!</h1>
-                <Link to="/profile">{user.platformIds.length ? 'Atidaryti profilį' : 'Nurodyti turimas platformas'}</Link>
-              </section>
+              <Recommendations profile={user} token={session.token} onUnauthorized={clearSession} />
             ) : <Navigate to="/login" replace />} />
             <Route path="/profile" element={user ? (
               <Profile token={session.token} onUnauthorized={clearSession} onSave={setUser} />

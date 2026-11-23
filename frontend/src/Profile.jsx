@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { api, errorMessage } from './api'
 
+function ratingText(rating) {
+  return [rating.pegi && `PEGI ${rating.pegi}`, `ESRB ${rating.esrb}`].filter(Boolean).join(' / ')
+}
+
 export default function Profile({ token, onUnauthorized, onSave }) {
   const [profile, setProfile] = useState(null)
   const [options, setOptions] = useState(null)
@@ -38,16 +42,30 @@ export default function Profile({ token, onUnauthorized, onSave }) {
     change({ platformIds })
   }
 
+  function changeGroupDate(index, date) {
+    change({ groupBirthDates: profile.groupBirthDates.map((value, position) => position === index ? date : value) })
+  }
+
   async function submit(event) {
     event.preventDefault()
     setError('')
     setSaved(false)
+    if (profile.groupBirthDates.some(date => !date)) {
+      setError('Įveskite kiekvieno pridėto grupės nario gimimo datą.')
+      return
+    }
     setSaving(true)
     try {
       const updated = await api('/api/profile', {
         method: 'PUT',
         token,
-        body: { name: profile.name, platformIds: profile.platformIds, pcLevel: profile.pcLevel },
+        body: {
+          name: profile.name,
+          platformIds: profile.platformIds,
+          pcLevel: profile.pcLevel,
+          birthDate: profile.birthDate || null,
+          groupBirthDates: profile.groupBirthDates,
+        },
       })
       setProfile(updated)
       onSave(updated)
@@ -78,6 +96,17 @@ export default function Profile({ token, onUnauthorized, onSave }) {
             El. paštas
             <input value={profile.email} type="email" readOnly />
           </label>
+          <label>
+            Gimimo data
+            <input type="date" autoComplete="bday" value={profile.birthDate ?? ''}
+              readOnly={Boolean(profile.ageRating)} aria-describedby="birth-date-note"
+              onChange={event => change({ birthDate: event.target.value })} />
+          </label>
+          <p className="field-note" id="birth-date-note">
+            {profile.ageRating
+              ? `Leidžiamas amžiaus reitingas iki ${ratingText(profile.ageRating)}.`
+              : 'Gimimo data reikalinga rekomendacijoms. Išsaugojus jos pakeisti nebegalėsite.'}
+          </p>
           <fieldset>
             <legend>Turimos platformos</legend>
             <div className="platforms">
@@ -99,6 +128,27 @@ export default function Profile({ token, onUnauthorized, onSave }) {
               </select>
             </label>
           )}
+          <fieldset className="group-fields">
+            <legend>Grupės nariai</legend>
+            {profile.groupBirthDates.map((date, index) => (
+              <div className="group-member" key={index}>
+                <label>
+                  {index + 1}. nario gimimo data
+                  <input type="date" value={date} onChange={event => changeGroupDate(index, event.target.value)} />
+                </label>
+                <button type="button" className="secondary" aria-label={`Pašalinti ${index + 1} narį`}
+                  onClick={() => change({ groupBirthDates: profile.groupBirthDates.filter((_, position) => position !== index) })}>
+                  Pašalinti
+                </button>
+              </div>
+            ))}
+            {profile.groupAgeRating && <p className="field-note">Grupės amžiaus reitingas iki {ratingText(profile.groupAgeRating)}.</p>}
+            <button type="button" className="secondary"
+              disabled={!profile.birthDate || profile.groupBirthDates.length >= options.maxGroupMembers}
+              onClick={() => change({ groupBirthDates: [...profile.groupBirthDates, ''] })}>
+              Pridėti narį
+            </button>
+          </fieldset>
           {saved && <p role="status">Profilis išsaugotas.</p>}
           <button type="submit" disabled={saving}>Išsaugoti</button>
         </form>
