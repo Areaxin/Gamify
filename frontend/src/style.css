@@ -144,7 +144,7 @@ form p, .auth-panel > p:last-child {
   font-size: 0.9rem;
 }
 
-.group-fields, .recommendations ul {
+.group-fields, .playlist-games {
   display: grid;
   gap: 0.75rem;
 }
@@ -165,12 +165,12 @@ form p, .auth-panel > p:last-child {
   font-size: 1.15rem;
 }
 
-.recommendations ul {
+.playlist-games {
   padding: 0;
   list-style: none;
 }
 
-.recommendations li {
+.playlist-games li {
   display: grid;
   grid-template-columns: minmax(5rem, 8rem) minmax(0, 1fr);
   gap: 1rem;
@@ -270,6 +270,10 @@ button.store-button:disabled {
 
 .query-history {
   margin-top: 1.5rem;
+}
+
+.save-playlist-form {
+  margin-top: 1.25rem;
   padding-top: 1rem;
   border-top: 1px solid #dce2ed;
 }
@@ -282,6 +286,25 @@ button.store-button:disabled {
 .query-history ul {
   display: grid;
   gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.saved-playlists {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #dce2ed;
+}
+
+.saved-playlists h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+}
+
+.saved-playlist-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -307,6 +330,33 @@ button.history-query {
   text-align: left;
   text-decoration: underline;
   overflow-wrap: anywhere;
+}
+
+.saved-playlist-list > li {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #dce2ed;
+  border-radius: 0.4rem;
+}
+
+.saved-playlist-list form {
+  width: 100%;
+}
+
+.playlist-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.opened-playlist {
+  padding-top: 0.75rem;
+  border-top: 1px solid #dce2ed;
+}
+
+.opened-playlist h3 {
+  margin: 0;
 }
 
 footer {

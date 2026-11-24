@@ -11,6 +11,7 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
     public DbSet<QueryTemplate> QueryTemplates => Set<QueryTemplate>();
     public DbSet<QueryHistoryEntry> QueryHistory => Set<QueryHistoryEntry>();
     public DbSet<StoreClick> StoreClicks => Set<StoreClick>();
+    public DbSet<SavedPlaylist> SavedPlaylists => Set<SavedPlaylist>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,6 +29,9 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
 
         modelBuilder.Entity<User>().HasMany(user => user.GroupMembers).WithOne()
             .HasForeignKey(member => member.UserId);
+        modelBuilder.Entity<User>().HasMany(user => user.SavedPlaylists).WithOne()
+            .HasForeignKey(playlist => playlist.UserId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<SavedPlaylist>().Property(playlist => playlist.Name).HasMaxLength(100);
 
         GameCatalog.Seed(modelBuilder);
 

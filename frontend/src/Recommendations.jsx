@@ -1,21 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, errorMessage } from './api'
-import { trustedStoreLink } from './storeLinks'
-
-const euro = new Intl.NumberFormat('lt-LT', { style: 'currency', currency: 'EUR' })
-
-function fallbackCover(title) {
-  const safeTitle = title.replace(/[&<>"']/g, character => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&apos;',
-  })[character])
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600"><rect width="400" height="600" fill="#4049aa"/><circle cx="200" cy="210" r="95" fill="#fff" fill-opacity=".12"/><path d="M140 210h120m-60-60v120" stroke="#fff" stroke-opacity=".7" stroke-width="12"/><text x="200" y="390" fill="#fff" font-family="sans-serif" font-size="30" text-anchor="middle">${safeTitle}</text></svg>`
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`
-}
+import PlaylistGames from './PlaylistGames'
+import StoreButton from './StoreButton'
 
 export default function Recommendations({ profile, token, onUnauthorized, text, setText }) {
   const [forGroup, setForGroup] = useState(false)
@@ -27,6 +14,10 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
   const [templates, setTemplates] = useState([])
   const [templatesLoading, setTemplatesLoading] = useState(false)
   const [templatesError, setTemplatesError] = useState('')
+  const [playlistName, setPlaylistName] = useState('')
+  const [savingPlaylist, setSavingPlaylist] = useState(false)
+  const [playlistMessage, setPlaylistMessage] = useState('')
+  const [playlistError, setPlaylistError] = useState('')
 
   useEffect(() => () => activeRequest.current?.abort(), [])
   useEffect(() => {
@@ -89,6 +80,39 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
     }
   }
 
+  async function savePlaylist(event) {
+    event.preventDefault()
+    setPlaylistMessage('')
+    setPlaylistError('')
+    if (!playlistName.trim() || playlistName.trim().length > 100) {
+      setPlaylistError('Įveskite grojaraščio pavadinimą (iki 100 simbolių).')
+      return
+    }
+
+    setSavingPlaylist(true)
+    try {
+      const saved = await api('/api/saved-playlists', {
+        method: 'POST',
+        token,
+        body: {
+          name: playlistName,
+          games: result.games.map(({ id, matchPercentage, explanation }) => ({
+            id,
+            matchPercentage,
+            explanation,
+          })),
+        },
+      })
+      setPlaylistMessage(`Grojaraštis „${saved.name}“ išsaugotas. Jį rasite profilyje.`)
+      setPlaylistName('')
+    } catch (error) {
+      if (error.status === 401) onUnauthorized()
+      else setPlaylistError(errorMessage(error))
+    } finally {
+      setSavingPlaylist(false)
+    }
+  }
+
   return (
     <section className="panel">
       <h1>Sveiki, {profile.name}!</h1>
@@ -148,67 +172,27 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
         <section className="recommendations">
           <h2>Jūsų žaidimų grojaraštis</h2>
           <p className="field-note">Katalogo kainos orientacinės.</p>
-          <ul>
-            {result.games.map(game => (
-              <li key={game.id}>
-                <img
-                  className="game-cover"
-                  src={game.coverImageUrl}
-                  alt={`„${game.title}“ viršelis`}
-                  loading="lazy"
-                  onError={event => {
-                    const image = event.currentTarget
-                    image.onerror = null
-                    image.src = fallbackCover(game.title)
-                  }}
-                />
-                <div className="game-details">
-                  <h3>{game.title}</h3>
-                  <strong className="match-score">{game.matchPercentage}% atitikimas</strong>
-                  <p>{game.explanation}</p>
-                  <span><strong>Kaina:</strong> {game.priceCents ? euro.format(game.priceCents / 100) : 'Nemokamas'}</span>
-                  <span><strong>Platformos:</strong> {game.platforms.join(', ')}</span>
-                  <span className="field-note">
-                    {game.maxPlayers === 1 ? '1 žaidėjas' : `Iki ${game.maxPlayers} žaidėjų`}
-                    {game.pegi != null && ` · PEGI ${game.pegi}`}
-                    {game.esrb && ` · ESRB ${game.esrb}`}
-                  </span>
-                  <StoreButton game={game} token={token} />
-                </div>
-              </li>
-            ))}
-          </ul>
+          <PlaylistGames games={result.games} renderAction={game => <StoreButton game={game} token={token} />} />
+          <form className="save-playlist-form" onSubmit={savePlaylist}>
+            <label>
+              Išsaugoti grojaraštį pavadinimu
+              <input
+                required
+                maxLength={100}
+                value={playlistName}
+                onChange={event => setPlaylistName(event.target.value)}
+                placeholder="Pavyzdžiui, Žaidimai savaitgaliui"
+                disabled={savingPlaylist}
+              />
+            </label>
+            {playlistError && <p className="error" role="alert">{playlistError}</p>}
+            {playlistMessage && <p role="status">{playlistMessage}</p>}
+            <button type="submit" disabled={savingPlaylist}>
+              {savingPlaylist ? 'Išsaugoma…' : 'Išsaugoti grojaraštį'}
+            </button>
+          </form>
         </section>
       )}
     </section>
-  )
-}
-
-function StoreButton({ game, token }) {
-  const link = trustedStoreLink(game.storeUrl)
-  const noteId = `store-note-${game.id}`
-
-  if (!link) {
-    return (
-      <span className="store-action">
-        <button type="button" className="store-button" disabled aria-describedby={noteId}>Pirkti</button>
-        <span id={noteId} className="field-note">Oficiali Steam ar Epic parduotuvės nuoroda šiam žaidimui nežinoma.</span>
-      </span>
-    )
-  }
-
-  // Nuoroda atsidaro iškart; paspaudimas fiksuojamas lygiagrečiai ir klaida nieko neblokuoja.
-  function recordClick() {
-    api(`/api/games/${game.id}/store-clicks`, { method: 'POST', token, keepalive: true }).catch(() => {})
-  }
-
-  return (
-    <span className="store-action">
-      <a className="store-button" href={link.url} target="_blank" rel="noopener noreferrer"
-        onClick={recordClick} onAuxClick={event => { if (event.button === 1) recordClick() }}>
-        Pirkti {link.store} parduotuvėje
-        <span className="visually-hidden"> (atsidaro naujame skirtuke)</span>
-      </a>
-    </span>
   )
 }

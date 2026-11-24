@@ -703,6 +703,34 @@ namespace Gamify.Api.Migrations
                     b.ToTable("StoreClicks");
                 });
 
+            modelBuilder.Entity("Gamify.Api.Data.SavedPlaylist", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GamesJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SavedPlaylists");
+                });
+
             modelBuilder.Entity("Gamify.Api.Data.User", b =>
                 {
                     b.Property<int>("Id")
@@ -826,6 +854,15 @@ namespace Gamify.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Gamify.Api.Data.SavedPlaylist", b =>
+                {
+                    b.HasOne("Gamify.Api.Data.User", null)
+                        .WithMany("SavedPlaylists")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Gamify.Api.Data.UserSession", b =>
                 {
                     b.HasOne("Gamify.Api.Data.User", null)
@@ -853,6 +890,8 @@ namespace Gamify.Api.Migrations
             modelBuilder.Entity("Gamify.Api.Data.User", b =>
                 {
                     b.Navigation("GroupMembers");
+
+                    b.Navigation("SavedPlaylists");
                 });
 #pragma warning restore 612, 618
         }
