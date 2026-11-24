@@ -13,3 +13,5 @@ The recommendation API returns a deterministic 0–100 match percentage. It scor
 The budget and player-count filters are hard constraints; mood and experience are scored preferences. If no scorable preference was extracted, the match score is a neutral 50. Results are ordered by score descending, with title and ID as stable tie-breakers. `backend/Gamify.Api.Tests/RecommendationScoringTests.cs` verifies the weighted formula and its neutral and mismatch cases.
 
 Users can save a generated playlist with a trimmed, required name of up to 100 characters. Saved playlists are private to their owner and keep a snapshot of the game details and match explanations. The authenticated `/api/saved-playlists` endpoints list, create, open, rename, and delete playlists; the profile page provides the corresponding actions.
+
+Games can be removed from an opened saved playlist in the profile. Removal is confirmed, saved to that playlist's snapshot, and does not change games returned by future recommendation searches.

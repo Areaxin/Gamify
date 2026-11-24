@@ -132,6 +132,29 @@ public sealed class SavedPlaylistsController(GamifyDbContext db) : ControllerBas
         return Ok(new SavedPlaylistSummary(playlist.Id, playlist.Name, playlist.CreatedAt));
     }
 
+    [HttpDelete("{id:int}/games/{gameId:int}")]
+    public async Task<IActionResult> RemoveGame(int id, int gameId, CancellationToken cancellationToken)
+    {
+        if (!JwtSessions.TryReadClaims(User, out var userId, out _))
+            return Unauthorized();
+
+        var playlist = await db.SavedPlaylists
+            .SingleOrDefaultAsync(playlist => playlist.Id == id && playlist.UserId == userId, cancellationToken);
+        if (playlist is null)
+            return NotFound();
+
+        var games = JsonSerializer.Deserialize<SavedPlaylistGame[]>(playlist.GamesJson)
+            ?? throw new JsonException($"Saved playlist {playlist.Id} contains invalid game data.");
+        var remainingGames = games.Where(game => game.Id != gameId).ToArray();
+        if (remainingGames.Length == games.Length)
+            return NotFound();
+
+        playlist.GamesJson = JsonSerializer.Serialize(remainingGames);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
+    }
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
