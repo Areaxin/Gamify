@@ -12,8 +12,38 @@ export default function Recommendations({ profile, token, onUnauthorized }) {
   const [searching, setSearching] = useState(false)
   const activeRequest = useRef(null)
   const length = Array.from(text).length
+  const [templates, setTemplates] = useState([])
+  const [templatesLoading, setTemplatesLoading] = useState(false)
+  const [templatesError, setTemplatesError] = useState('')
 
   useEffect(() => () => activeRequest.current?.abort(), [])
+  useEffect(() => {
+    const request = new AbortController()
+
+    async function loadTemplates() {
+      setTemplatesLoading(true)
+
+      try {
+        const data = await api('/api/query-templates', {
+          token,
+          signal: request.signal,
+        })
+
+        setTemplates(data)
+      } catch (error) {
+        if (request.signal.aborted) return
+
+        if (error.status === 401) onUnauthorized()
+        else setTemplatesError(errorMessage(error))
+      } finally {
+        if (!request.signal.aborted) setTemplatesLoading(false)
+      }
+    }
+
+    loadTemplates()
+
+    return () => request.abort()
+  }, [token])
 
   async function search(event) {
     event.preventDefault()
@@ -54,6 +84,30 @@ export default function Recommendations({ profile, token, onUnauthorized }) {
         <p>Norėdami gauti rekomendacijas, <Link to="/profile">profilyje</Link> nurodykite gimimo datą ir turimas platformas.</p>
       ) : (
         <form onSubmit={search}>
+          <div className="query-templates">
+            <p>Paruošti paieškos šablonai:</p>
+
+            {templatesLoading && <p>Įkeliami šablonai...</p>}
+
+            {templatesError && (
+                <p className="error">{templatesError}</p>
+            )}
+
+            {templates.map(template => (
+                <button
+                    key={template.id}
+                    type="button"
+                    disabled={searching}
+                    onClick={() => {
+                      setText(template.text)
+                      setError('')
+                      setResult(null)
+                    }}
+                >
+                  {template.title}
+                </button>
+            ))}
+          </div>
           <label>
             Kokio žaidimo ieškote?
             <textarea rows={4} value={text} aria-describedby="description-length" placeholder="Ramus žaidimas vakarui su draugais, iki 20 €, pradedantiesiems"
