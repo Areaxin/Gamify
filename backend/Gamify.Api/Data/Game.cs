@@ -4,6 +4,9 @@ public sealed class Game
 {
     public int Id { get; set; }
     public string Title { get; set; } = "";
+
+    /// <summary>Oficialus parduotuvės puslapis (Steam / Epic). Null, jei nežinomas.</summary>
+    public string? StoreUrl { get; set; }
     public int PriceCents { get; set; }
     public int MaxPlayers { get; set; }
     public GameMood Moods { get; set; }

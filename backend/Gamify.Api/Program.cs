@@ -88,6 +88,9 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy("recommendations", context => RateLimitPartition.GetFixedWindowLimiter(
         JwtSessions.TryReadClaims(context.User, out var userId, out _) ? userId.ToString() : "anonymous",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 12, Window = TimeSpan.FromMinutes(1) }));
+    options.AddPolicy("store-clicks", context => RateLimitPartition.GetFixedWindowLimiter(
+        JwtSessions.TryReadClaims(context.User, out var userId, out _) ? userId.ToString() : "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1) }));
 });
 
 var connectionString = builder.Configuration.GetConnectionString("Gamify")

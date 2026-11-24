@@ -1,6 +1,6 @@
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:5218'
 
-export async function api(path, { token, body, method = 'GET', signal } = {}) {
+export async function api(path, { token, body, method = 'GET', signal, keepalive } = {}) {
   const headers = {}
   if (token) headers.Authorization = `Bearer ${token}`
   if (body) headers['Content-Type'] = 'application/json'
@@ -10,6 +10,7 @@ export async function api(path, { token, body, method = 'GET', signal } = {}) {
     headers,
     body: body ? JSON.stringify(body) : undefined,
     signal,
+    keepalive,
   })
   const data = response.headers.get('content-type')?.includes('json')
     ? await response.json()

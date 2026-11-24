@@ -32,11 +32,33 @@ internal static class GameCatalog
             (Game(16, "DOOM (2016)", 1999, 1, GameMood.Action, 3, 3, pegi: 18, esrb: 17), all)
         ];
 
+        foreach (var (game, _) in entries)
+            game.StoreUrl = StoreUrls.GetValueOrDefault(game.Id);
+
         modelBuilder.Entity<Game>().HasData(entries.Select(entry => entry.Game));
         modelBuilder.Entity<Game>().HasMany(game => game.Platforms).WithMany().UsingEntity("GamePlatforms",
             join => join.HasData(entries.SelectMany(entry => entry.PlatformIds.Select(platformId =>
                 new { GameId = entry.Game.Id, PlatformsId = platformId }))));
     }
+
+    // Oficialūs parduotuvių puslapiai. Minecraft ir Snipperclips nėra Steam / Epic, Fae Farm nuoroda dar nepatikrinta,
+    // todėl jų mygtukas sąsajoje neaktyvus.
+    private static readonly Dictionary<int, string> StoreUrls = new()
+    {
+        [1] = StoreLinks.Steam(413150),            // Stardew Valley
+        [2] = StoreLinks.Steam(673950),            // Farm Together
+        [3] = StoreLinks.Steam(477160),            // Human Fall Flat
+        [4] = StoreLinks.Steam(837470),            // Untitled Goose Game
+        [5] = StoreLinks.Steam(914710),            // Cat Quest II
+        [6] = StoreLinks.Steam(2707930),           // Palia
+        [8] = StoreLinks.Steam(1135690),           // Unpacking
+        [11] = StoreLinks.Steam(1672970),          // Minecraft Dungeons
+        [12] = StoreLinks.Epic("rocket-league"),   // Rocket League (nemokamas tik per Epic)
+        [13] = StoreLinks.Steam(620),              // Portal 2
+        [14] = StoreLinks.Epic("world-of-goo-2"),  // World of Goo 2
+        [15] = StoreLinks.Steam(550),              // Left 4 Dead 2
+        [16] = StoreLinks.Steam(379720)            // DOOM (2016)
+    };
 
     private static Game Game(int id, string title, int priceCents, int maxPlayers, GameMood moods, int difficulty,
         int? minimumPcLevel, int? pegi, int? esrb) => new()

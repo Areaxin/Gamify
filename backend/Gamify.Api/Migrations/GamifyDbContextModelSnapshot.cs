@@ -311,6 +311,9 @@ namespace Gamify.Api.Migrations
                     b.Property<int>("PriceCents")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("StoreUrl")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -330,6 +333,7 @@ namespace Gamify.Api.Migrations
                             Moods = 1,
                             PegiAge = 12,
                             PriceCents = 1399,
+                            StoreUrl = "https://store.steampowered.com/app/413150/",
                             Title = "Stardew Valley"
                         },
                         new
@@ -341,6 +345,7 @@ namespace Gamify.Api.Migrations
                             Moods = 1,
                             PegiAge = 3,
                             PriceCents = 1999,
+                            StoreUrl = "https://store.steampowered.com/app/673950/",
                             Title = "Farm Together"
                         },
                         new
@@ -353,6 +358,7 @@ namespace Gamify.Api.Migrations
                             Moods = 17,
                             PegiAge = 3,
                             PriceCents = 1999,
+                            StoreUrl = "https://store.steampowered.com/app/477160/",
                             Title = "Human Fall Flat"
                         },
                         new
@@ -365,6 +371,7 @@ namespace Gamify.Api.Migrations
                             Moods = 17,
                             PegiAge = 3,
                             PriceCents = 1999,
+                            StoreUrl = "https://store.steampowered.com/app/837470/",
                             Title = "Untitled Goose Game"
                         },
                         new
@@ -377,6 +384,7 @@ namespace Gamify.Api.Migrations
                             Moods = 3,
                             PegiAge = 7,
                             PriceCents = 1499,
+                            StoreUrl = "https://store.steampowered.com/app/914710/",
                             Title = "Cat Quest II"
                         },
                         new
@@ -389,6 +397,7 @@ namespace Gamify.Api.Migrations
                             Moods = 3,
                             PegiAge = 12,
                             PriceCents = 0,
+                            StoreUrl = "https://store.steampowered.com/app/2707930/",
                             Title = "Palia"
                         },
                         new
@@ -413,6 +422,7 @@ namespace Gamify.Api.Migrations
                             Moods = 17,
                             PegiAge = 3,
                             PriceCents = 1999,
+                            StoreUrl = "https://store.steampowered.com/app/1135690/",
                             Title = "Unpacking"
                         },
                         new
@@ -448,6 +458,7 @@ namespace Gamify.Api.Migrations
                             Moods = 6,
                             PegiAge = 7,
                             PriceCents = 1999,
+                            StoreUrl = "https://store.steampowered.com/app/1672970/",
                             Title = "Minecraft Dungeons"
                         },
                         new
@@ -460,6 +471,7 @@ namespace Gamify.Api.Migrations
                             Moods = 72,
                             PegiAge = 3,
                             PriceCents = 0,
+                            StoreUrl = "https://store.epicgames.com/p/rocket-league",
                             Title = "Rocket League"
                         },
                         new
@@ -472,6 +484,7 @@ namespace Gamify.Api.Migrations
                             Moods = 16,
                             PegiAge = 12,
                             PriceCents = 975,
+                            StoreUrl = "https://store.steampowered.com/app/620/",
                             Title = "Portal 2"
                         },
                         new
@@ -483,6 +496,7 @@ namespace Gamify.Api.Migrations
                             MinimumPcLevel = 1,
                             Moods = 48,
                             PriceCents = 2999,
+                            StoreUrl = "https://store.epicgames.com/p/world-of-goo-2",
                             Title = "World of Goo 2"
                         },
                         new
@@ -495,6 +509,7 @@ namespace Gamify.Api.Migrations
                             Moods = 4,
                             PegiAge = 18,
                             PriceCents = 975,
+                            StoreUrl = "https://store.steampowered.com/app/550/",
                             Title = "Left 4 Dead 2"
                         },
                         new
@@ -507,6 +522,7 @@ namespace Gamify.Api.Migrations
                             Moods = 4,
                             PegiAge = 18,
                             PriceCents = 1999,
+                            StoreUrl = "https://store.steampowered.com/app/379720/",
                             Title = "DOOM (2016)"
                         });
                 });
@@ -634,6 +650,35 @@ namespace Gamify.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Gamify.Api.Data.StoreClick", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("ClickedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("GameId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Store")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("GameId", "ClickedAt");
+
+                    b.ToTable("StoreClicks");
+                });
+
             modelBuilder.Entity("Gamify.Api.Data.User", b =>
                 {
                     b.Property<int>("Id")
@@ -728,6 +773,21 @@ namespace Gamify.Api.Migrations
                 {
                     b.HasOne("Gamify.Api.Data.User", null)
                         .WithMany("GroupMembers")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Gamify.Api.Data.StoreClick", b =>
+                {
+                    b.HasOne("Gamify.Api.Data.Game", null)
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Gamify.Api.Data.User", null)
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
