@@ -27,6 +27,9 @@ public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponse
         if (request.Text.EnumerateRunes().Count() > 1000)
             return BadRequest(new { message = "Aprašymas negali viršyti 1000 simbolių." });
 
+        var searchText = request.Text.Trim();
+        var searchedAt = DateTime.UtcNow;
+
         var user = await db.Users.AsNoTracking().Include(user => user.Platforms).Include(user => user.GroupMembers)
             .AsSplitQuery().SingleOrDefaultAsync(user => user.Id == userId, cancellationToken);
         if (user is null)
@@ -47,7 +50,7 @@ public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponse
         RecommendationPrompt filters;
         try
         {
-            var text = await ai.GetStructuredTextAsync(request.Text.Trim(), RecommendationPrompt.Instructions,
+            var text = await ai.GetStructuredTextAsync(searchText, RecommendationPrompt.Instructions,
                 "game_filters", RecommendationPrompt.Schema, cancellationToken);
             filters = RecommendationPrompt.Parse(text);
         }
@@ -96,6 +99,10 @@ public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponse
             .ThenBy(game => game.Id)
             .Take(10)
             .ToArray();
+
+        db.QueryHistory.Add(new QueryHistoryEntry { UserId = userId, Text = searchText, CreatedAt = searchedAt });
+        await db.SaveChangesAsync(cancellationToken);
+
         if (recommendations.Length == 0)
             return Ok(new
             {
