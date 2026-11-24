@@ -22,6 +22,7 @@ function App() {
   const [session, setSession] = useState(loadSession)
   const [user, setUser] = useState(null)
   const [searchText, setSearchText] = useState('')
+  const [forGroup, setForGroup] = useState(false)
   const [status, setStatus] = useState('Tikrinamas ryšys su API…')
   const [sessionError, setSessionError] = useState('')
   const [logoutError, setLogoutError] = useState('')
@@ -34,6 +35,7 @@ function App() {
     setSession(null)
     setUser(null)
     setSearchText('')
+    setForGroup(false)
     setSessionError('')
     setLogoutError('')
   }, [])
@@ -43,8 +45,9 @@ function App() {
     setSession(newSession)
   }
 
-  function reuseQuery(text) {
-    setSearchText(text)
+  function reuseQuery(entry) {
+    setSearchText(entry.text)
+    setForGroup(entry.forGroup && user.groupBirthDates.length > 0)
     navigate('/')
   }
 
@@ -126,7 +129,8 @@ function App() {
           <Routes>
             <Route path="/" element={user ? (
               <Recommendations profile={user} token={session.token} onUnauthorized={clearSession}
-                text={searchText} setText={setSearchText} />
+                text={searchText} setText={setSearchText} forGroup={forGroup && user.groupBirthDates.length > 0}
+                setForGroup={setForGroup} />
             ) : <Navigate to="/login" replace />} />
             <Route path="/profile" element={user ? (
               <Profile token={session.token} onUnauthorized={clearSession} onSave={setUser} onReuseQuery={reuseQuery} />

@@ -4,8 +4,7 @@ import { api, errorMessage } from './api'
 import PlaylistGames from './PlaylistGames'
 import StoreButton from './StoreButton'
 
-export default function Recommendations({ profile, token, onUnauthorized, text, setText }) {
-  const [forGroup, setForGroup] = useState(false)
+export default function Recommendations({ profile, token, onUnauthorized, text, setText, forGroup, setForGroup }) {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [searching, setSearching] = useState(false)
@@ -96,11 +95,7 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
         token,
         body: {
           name: playlistName,
-          games: result.games.map(({ id, matchPercentage, explanation }) => ({
-            id,
-            matchPercentage,
-            explanation,
-          })),
+          recommendationToken: result.recommendationToken,
         },
       })
       setPlaylistMessage(`Grojaraštis „${saved.name}“ išsaugotas. Jį rasite profilyje.`)
@@ -159,7 +154,7 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
           )}
           {error && <p className="error" role="alert">{error}</p>}
           <button type="submit" disabled={searching}>{searching ? 'Ieškoma…' : 'Ieškoti žaidimų'}</button>
-          {searching && <p role="status" aria-live="polite">Užklausa apdorojama. Tai gali užtrukti iki 15 sekundžių.</p>}
+          {searching && <p role="status">Ieškoma žaidimų internete ir tikrinamos kainos…</p>}
         </form>
       )}
       {result && result.games.length === 0 && (
@@ -171,7 +166,6 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
       {result?.games.length > 0 && (
         <section className="recommendations">
           <h2>Jūsų žaidimų grojaraštis</h2>
-          <p className="field-note">Katalogo kainos orientacinės.</p>
           <PlaylistGames games={result.games} renderAction={game => <StoreButton game={game} token={token} />} />
           <form className="save-playlist-form" onSubmit={savePlaylist}>
             <label>

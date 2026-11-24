@@ -49,10 +49,11 @@ export default function QueryHistory({ token, onUnauthorized, onReuse }) {
           {entries.map(entry => (
             <li key={entry.id}>
               <div className="history-entry">
-                <button type="button" className="history-query" onClick={() => onReuse(entry.text)}>
+                <button type="button" className="history-query" onClick={() => onReuse(entry)}>
                   {entry.text}
                 </button>
                 <time className="field-note" dateTime={entry.createdAt}>{dateFormat.format(new Date(entry.createdAt))}</time>
+                {entry.forGroup && <span className="field-note">Grupei</span>}
               </div>
               <button type="button" className="secondary" aria-label={`Ištrinti užklausą „${entry.text}“`}
                 disabled={deleting !== null} onClick={() => remove(entry.id)}>
