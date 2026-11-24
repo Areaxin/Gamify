@@ -35,7 +35,7 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     policy.WithOrigins("http://localhost:5173")
-        .WithMethods("GET", "POST", "PUT")
+        .WithMethods("GET", "POST", "PUT", "DELETE")
         .AllowAnyHeader()));
 
 var configuredKey = builder.Configuration["Jwt:SigningKey"];

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { api, errorMessage } from './api'
+import QueryHistory from './QueryHistory'
 
 function ratingText(rating) {
   return [rating.pegi && `PEGI ${rating.pegi}`, `ESRB ${rating.esrb}`].filter(Boolean).join(' / ')
 }
 
-export default function Profile({ token, onUnauthorized, onSave }) {
+export default function Profile({ token, onUnauthorized, onSave, onReuseQuery }) {
   const [profile, setProfile] = useState(null)
   const [options, setOptions] = useState(null)
   const [error, setError] = useState('')
@@ -153,6 +154,7 @@ export default function Profile({ token, onUnauthorized, onSave }) {
           <button type="submit" disabled={saving}>Išsaugoti</button>
         </form>
       )}
+      <QueryHistory token={token} onUnauthorized={onUnauthorized} onReuse={onReuseQuery} />
     </section>
   )
 }

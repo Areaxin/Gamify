@@ -17,8 +17,7 @@ function fallbackCover(title) {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`
 }
 
-export default function Recommendations({ profile, token, onUnauthorized }) {
-  const [text, setText] = useState('')
+export default function Recommendations({ profile, token, onUnauthorized, text, setText }) {
   const [forGroup, setForGroup] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
@@ -56,7 +55,7 @@ export default function Recommendations({ profile, token, onUnauthorized }) {
     loadTemplates()
 
     return () => request.abort()
-  }, [token])
+  }, [token, onUnauthorized])
 
   async function search(event) {
     event.preventDefault()

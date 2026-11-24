@@ -583,6 +583,30 @@ namespace Gamify.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Gamify.Api.Data.QueryHistoryEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt", "Id");
+
+                    b.ToTable("QueryHistory");
+                });
+
             modelBuilder.Entity("Gamify.Api.Data.QueryTemplate", b =>
                 {
                     b.Property<int>("Id")
@@ -773,6 +797,15 @@ namespace Gamify.Api.Migrations
                 {
                     b.HasOne("Gamify.Api.Data.User", null)
                         .WithMany("GroupMembers")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Gamify.Api.Data.QueryHistoryEntry", b =>
+                {
+                    b.HasOne("Gamify.Api.Data.User", null)
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

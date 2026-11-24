@@ -268,6 +268,47 @@ button.store-button:disabled {
   white-space: nowrap;
 }
 
+.query-history {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #dce2ed;
+}
+
+.query-history h2 {
+  margin-top: 0;
+  font-size: 1.15rem;
+}
+
+.query-history ul {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.query-history li {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.history-entry {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+button.history-query {
+  padding: 0;
+  color: #4049aa;
+  background: none;
+  border: 0;
+  text-align: left;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
 footer {
   margin: 1rem;
   color: #505d70;

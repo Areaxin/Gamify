@@ -21,6 +21,7 @@ function loadSession() {
 function App() {
   const [session, setSession] = useState(loadSession)
   const [user, setUser] = useState(null)
+  const [searchText, setSearchText] = useState('')
   const [status, setStatus] = useState('Tikrinamas ryšys su API…')
   const [sessionError, setSessionError] = useState('')
   const [logoutError, setLogoutError] = useState('')
@@ -32,6 +33,7 @@ function App() {
     sessionStorage.removeItem(sessionKey)
     setSession(null)
     setUser(null)
+    setSearchText('')
     setSessionError('')
     setLogoutError('')
   }, [])
@@ -39,6 +41,11 @@ function App() {
   function login(newSession) {
     sessionStorage.setItem(sessionKey, JSON.stringify(newSession))
     setSession(newSession)
+  }
+
+  function reuseQuery(text) {
+    setSearchText(text)
+    navigate('/')
   }
 
   async function logout() {
@@ -118,10 +125,11 @@ function App() {
         ) : (
           <Routes>
             <Route path="/" element={user ? (
-              <Recommendations profile={user} token={session.token} onUnauthorized={clearSession} />
+              <Recommendations profile={user} token={session.token} onUnauthorized={clearSession}
+                text={searchText} setText={setSearchText} />
             ) : <Navigate to="/login" replace />} />
             <Route path="/profile" element={user ? (
-              <Profile token={session.token} onUnauthorized={clearSession} onSave={setUser} />
+              <Profile token={session.token} onUnauthorized={clearSession} onSave={setUser} onReuseQuery={reuseQuery} />
             ) : <Navigate to="/login" replace />} />
             <Route path="/login" element={user
               ? <Navigate to="/" replace />
