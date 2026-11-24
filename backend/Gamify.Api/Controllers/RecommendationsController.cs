@@ -30,61 +30,125 @@ public sealed class RecommendationsController(
 
         if (request.Filters?.Validate() is { } filterError)
             return BadRequest(new { message = filterError });
-
         var searchText = request.Text.Trim();
         var searchedAt = DateTime.UtcNow;
 
-        var user = await db.Users.AsNoTracking().Include(user => user.Platforms).Include(user => user.GroupMembers)
-            .AsSplitQuery().SingleOrDefaultAsync(user => user.Id == userId, cancellationToken);
+        var user = await db.Users.AsNoTracking().Include(user => user.Platforms)
+            .SingleOrDefaultAsync(user => user.Id == userId, cancellationToken);
         if (user is null)
             return Unauthorized();
         if (user.BirthDate is not { } birthDate)
             return BadRequest(new { message = "Pirmiausia profilyje nurodykite gimimo datą." });
         if (user.Platforms.Count == 0)
             return BadRequest(new { message = "Pirmiausia profilyje pasirinkite turimas platformas." });
-        if (request.ForGroup && user.GroupMembers.Count == 0)
-            return BadRequest(new { message = "Pirmiausia profilyje pridėkite grupės narių." });
-        if (!ai.IsConfigured)
-            return StatusCode(503, new { message = "Rekomendacijoms dar nesukonfigūruotas OpenAI raktas arba modelis." });
-
-        var youngest = request.ForGroup
-            ? user.GroupMembers.Select(member => member.BirthDate).Append(birthDate).Max()
-            : birthDate;
-        var age = AgeRatings.AgeOn(youngest, AgeRatings.Today);
-        var groupSize = request.ForGroup ? user.GroupMembers.Count + 1 : 1;
-
-        // GAM-US13: filtre galima pasirinkti bet kurią platformą; nepasirinkus ieškoma profilio platformose.
-        var platforms = user.Platforms;
-        var pcLevel = PcSpecs.Rank(user.PcLevel);
-        if (request.Filters?.PlatformIds is { Length: > 0 } selectedIds)
+        GroupRecommendationProfile? groupProfile = null;
+        if (request.ForGroup)
         {
-            var distinctIds = selectedIds.Distinct().ToArray();
-            platforms = await db.Platforms.AsNoTracking().Where(platform => distinctIds.Contains(platform.Id))
+            if (request.GroupId is not { } groupId)
+                return BadRequest(new { message = "Pasirinkite grupę." });
+
+            var group = await db.UserGroups.AsNoTracking()
+                .Include(item => item.Members)
+                .ThenInclude(member => member.User)
+                .ThenInclude(memberUser => memberUser.Platforms)
+                .AsSplitQuery()
+                .SingleOrDefaultAsync(item => item.Id == groupId && item.OwnerUserId == userId, cancellationToken);
+            if (group is null)
+                return NotFound(new { message = "Grupė nerasta." });
+
+            var groupUsers = group.Members.Select(member => member.User).ToArray();
+            var incompleteProfiles = groupUsers.Where(member =>
+                member.BirthDate is null || member.Platforms.Count == 0 ||
+                member.Platforms.Any(platform => platform.Id == Platform.PcId) &&
+                PcSpecs.Rank(member.PcLevel) == 0).ToArray();
+            if (incompleteProfiles.Length > 0)
+            {
+                var names = string.Join(", ", incompleteProfiles.Select(member => member.Name));
+                return BadRequest(new
+                {
+                    message = $"Grupės nariai turi užpildyti gimimo datą, platformas ir PC specifikacijų lygį savo profilyje: {names}."
+                });
+            }
+            groupProfile = GroupRecommendationProfile.FromMembers(groupUsers, userId, AgeRatings.Today);
+        }
+
+        var selectedPlatformIds = request.Filters?.PlatformIds?.Distinct().ToArray() ?? [];
+        var selectedPlatforms = selectedPlatformIds.Length == 0
+            ? []
+            : await db.Platforms.AsNoTracking().Where(platform => selectedPlatformIds.Contains(platform.Id))
                 .OrderBy(platform => platform.Id).ToListAsync(cancellationToken);
-            if (platforms.Count != distinctIds.Length)
-                return BadRequest(new { message = "Pasirinkta nežinoma platforma." });
-            // PC pasirinktas filtru, bet profilyje PC specifikacijų nėra: kompiuterio galingumo neribojame.
-            if (pcLevel == 0 && distinctIds.Contains(Platform.PcId))
+        if (selectedPlatforms.Count != selectedPlatformIds.Length)
+            return BadRequest(new { message = "Pasirinkta nežinoma platforma." });
+
+        List<Platform> requesterPlatforms;
+        int pcLevel;
+        int age;
+        int groupSize;
+        GroupMemberConstraint[] participants;
+        HashSet<int> sharedPlatformIds;
+        if (request.ForGroup)
+        {
+            var savedGroup = groupProfile!;
+            sharedPlatformIds = savedGroup.SharedPlatformIds;
+            if (selectedPlatformIds.Length > 0)
+                sharedPlatformIds.IntersectWith(selectedPlatformIds);
+
+            requesterPlatforms = await db.Platforms.AsNoTracking()
+                .Where(platform => sharedPlatformIds.Contains(platform.Id))
+                .OrderBy(platform => platform.Id).ToListAsync(cancellationToken);
+            age = savedGroup.Age;
+            pcLevel = savedGroup.PcLevel;
+            groupSize = savedGroup.GroupSize;
+            participants = savedGroup.Participants;
+        }
+        else
+        {
+            requesterPlatforms = selectedPlatforms.Count > 0 ? selectedPlatforms : user.Platforms;
+            pcLevel = PcSpecs.Rank(user.PcLevel);
+            if (pcLevel == 0 && requesterPlatforms.Any(platform => platform.Id == Platform.PcId))
                 pcLevel = PcSpecs.Levels.Length;
+            age = AgeRatings.AgeOn(birthDate, AgeRatings.Today);
+            groupSize = 1;
+            participants = [];
+            sharedPlatformIds = requesterPlatforms.Select(platform => platform.Id).ToHashSet();
         }
-        var overrides = request.Filters is { } filters
-            ? new FilterOverrides(filters.MaxBudgetCents, filters.PlayerCount, filters.ExperienceLevelValue)
-            : null;
+
         SavedPlaylistGame[] recommendations;
-        try
+        GroupConstraintBlocker[] blockingMembers;
+        string? emptyMessage = null;
+        if (request.ForGroup && sharedPlatformIds.Count == 0)
         {
-            recommendations = await search.SearchAsync(searchText,
-                platforms.Select(platform => platform.Name).ToArray(), pcLevel,
-                age, groupSize, cancellationToken, overrides);
+            recommendations = [];
+            blockingMembers = participants.Select(participant =>
+                new GroupConstraintBlocker(participant.Name, ["platformos"])).ToArray();
+            emptyMessage = "Nėra bendros platformos, kurią turėtų visi paieškos dalyviai. Patikrinkite kiekvieno nario platformų pasirinkimą.";
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        else
         {
-            return StatusCode(504, new { message = "DI atsakymas užtruko per ilgai. Pabandykite dar kartą." });
-        }
-        catch (Exception error) when (error is HttpRequestException or JsonException or InvalidOperationException
-            or KeyNotFoundException or FormatException)
-        {
-            return StatusCode(502, new { message = "Nepavyko gauti žaidimų iš interneto paieškos. Pabandykite dar kartą." });
+            if (!ai.IsConfigured)
+                return StatusCode(503, new { message = "Rekomendacijoms dar nesukonfigūruotas OpenAI raktas arba modelis." });
+
+            var platforms = requesterPlatforms;
+            var overrides = request.Filters is { } filters
+                ? new FilterOverrides(filters.MaxBudgetCents, filters.PlayerCount, filters.ExperienceLevelValue)
+                : null;
+            try
+            {
+                var result = await search.SearchAsync(searchText,
+                    platforms.Select(platform => platform.Name).ToArray(), pcLevel,
+                    age, groupSize, cancellationToken, overrides, participants);
+                recommendations = result.Games;
+                blockingMembers = result.BlockingMembers;
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                return StatusCode(504, new { message = "DI atsakymas užtruko per ilgai. Pabandykite dar kartą." });
+            }
+            catch (Exception error) when (error is HttpRequestException or JsonException or InvalidOperationException
+                or KeyNotFoundException or FormatException)
+            {
+                return StatusCode(502, new { message = "Nepavyko gauti žaidimų iš interneto paieškos. Pabandykite dar kartą." });
+            }
         }
 
         await db.Database.ExecuteSqlInterpolatedAsync($"""
@@ -95,14 +159,18 @@ public sealed class RecommendationsController(
             """, cancellationToken);
 
         if (recommendations.Length == 0)
-            return Ok(new
-            {
-                games = recommendations,
-                message = "Nieko nerasta."
-            });
+            emptyMessage ??= "Nieko nerasta.";
 
-        return Ok(new { games = recommendations, recommendationToken = tickets.Create(userId, recommendations) });
+        return Ok(new
+        {
+            games = recommendations,
+            message = emptyMessage,
+            blockingMembers,
+            recommendationToken = recommendations.Length > 0 ? tickets.Create(userId, recommendations) : null
+        });
     }
+
 }
 
-public sealed record RecommendationRequest(string? Text, bool ForGroup = false, RecommendationFilters? Filters = null);
+public sealed record RecommendationRequest(
+    string? Text, bool ForGroup = false, int? GroupId = null, RecommendationFilters? Filters = null);

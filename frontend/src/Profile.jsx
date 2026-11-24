@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, errorMessage } from './api'
+import { experienceLevels } from './SearchFilters'
+import GroupManagement from './GroupManagement'
 
 function ratingText(rating) {
   return [rating.pegi && `PEGI ${rating.pegi}`, `ESRB ${rating.esrb}`].filter(Boolean).join(' / ')
@@ -42,17 +44,18 @@ export default function Profile({ token, onUnauthorized, onSave }) {
     change({ platformIds })
   }
 
-  function changeGroupDate(index, date) {
-    change({ groupBirthDates: profile.groupBirthDates.map((value, position) => position === index ? date : value) })
-  }
-
   async function submit(event) {
     event.preventDefault()
     setError('')
     setSaved(false)
-    if (profile.groupBirthDates.some(date => !date)) {
-      setError('Įveskite kiekvieno pridėto grupės nario gimimo datą.')
-      return
+    const budgetText = String(profile.preferredBudgetEur ?? '').trim().replace(',', '.')
+    let preferredBudgetEur = null
+    if (budgetText) {
+      preferredBudgetEur = Number(budgetText)
+      if (!/^\d+(\.\d{1,2})?$/.test(budgetText) || preferredBudgetEur > 1000) {
+        setError('Pageidaujamas biudžetas turi būti nuo 0 iki 1000 € (iki 2 skaitmenų po kablelio).')
+        return
+      }
     }
     setSaving(true)
     try {
@@ -64,7 +67,8 @@ export default function Profile({ token, onUnauthorized, onSave }) {
           platformIds: profile.platformIds,
           pcLevel: profile.pcLevel,
           birthDate: profile.birthDate || null,
-          groupBirthDates: profile.groupBirthDates,
+          preferredBudgetEur,
+          preferredExperience: profile.preferredExperience || null,
         },
       })
       setProfile(updated)
@@ -128,31 +132,31 @@ export default function Profile({ token, onUnauthorized, onSave }) {
               </select>
             </label>
           )}
-          <fieldset className="group-fields">
-            <legend>Grupės nariai</legend>
-            {profile.groupBirthDates.map((date, index) => (
-              <div className="group-member" key={index}>
-                <label>
-                  {index + 1}. nario gimimo data
-                  <input type="date" value={date} onChange={event => changeGroupDate(index, event.target.value)} />
-                </label>
-                <button type="button" className="secondary" aria-label={`Pašalinti ${index + 1} narį`}
-                  onClick={() => change({ groupBirthDates: profile.groupBirthDates.filter((_, position) => position !== index) })}>
-                  Pašalinti
-                </button>
-              </div>
-            ))}
-            {profile.groupAgeRating && <p className="field-note">Grupės amžiaus reitingas iki {ratingText(profile.groupAgeRating)}.</p>}
-            <button type="button" className="secondary"
-              disabled={!profile.birthDate || profile.groupBirthDates.length >= options.maxGroupMembers}
-              onClick={() => change({ groupBirthDates: [...profile.groupBirthDates, ''] })}>
-              Pridėti narį
-            </button>
+          <fieldset className="profile-preferences">
+            <legend>Rekomendacijų pageidavimai</legend>
+            <p className="field-note">Šie pageidavimai bus taikomi ir grupės paieškoje.</p>
+            <label>
+              Didžiausias biudžetas (€)
+              <input type="text" inputMode="decimal" placeholder="Nenurodytas"
+                value={profile.preferredBudgetEur ?? ''}
+                onChange={event => change({ preferredBudgetEur: event.target.value })} />
+            </label>
+            <label>
+              Patirties lygis
+              <select value={profile.preferredExperience ?? ''}
+                onChange={event => change({ preferredExperience: event.target.value || null })}>
+                <option value="">Nenurodyta</option>
+                {experienceLevels.map(level => (
+                  <option key={level.value} value={level.value}>{level.label}</option>
+                ))}
+              </select>
+            </label>
           </fieldset>
           {saved && <p role="status">Profilis išsaugotas.</p>}
           <button type="submit" disabled={saving}>Išsaugoti</button>
         </form>
       )}
+      {profile && <GroupManagement token={token} onUnauthorized={onUnauthorized} />}
     </section>
   )
 }

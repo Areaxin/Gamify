@@ -284,6 +284,13 @@ namespace Gamify.Api.Migrations
                     b.Property<string>("PcLevel")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("PreferredBudgetCents")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PreferredExperience")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTimeOffset>("RegisteredAt")
                         .HasColumnType("TEXT");
 
@@ -300,6 +307,55 @@ namespace Gamify.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Gamify.Api.Data.UserGroup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OwnerUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId", "CreatedAt");
+
+                    b.ToTable("UserGroups");
+                });
+
+            modelBuilder.Entity("Gamify.Api.Data.UserGroupMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("AddedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("GroupId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("UserGroupMembers");
                 });
 
             modelBuilder.Entity("Gamify.Api.Data.UserSession", b =>
@@ -374,6 +430,34 @@ namespace Gamify.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Gamify.Api.Data.UserGroup", b =>
+                {
+                    b.HasOne("Gamify.Api.Data.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Gamify.Api.Data.UserGroupMember", b =>
+                {
+                    b.HasOne("Gamify.Api.Data.UserGroup", "Group")
+                        .WithMany("Members")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Gamify.Api.Data.User", "User")
+                        .WithMany("GroupMemberships")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Gamify.Api.Data.UserSession", b =>
                 {
                     b.HasOne("Gamify.Api.Data.User", null)
@@ -402,7 +486,14 @@ namespace Gamify.Api.Migrations
                 {
                     b.Navigation("GroupMembers");
 
+                    b.Navigation("GroupMemberships");
+
                     b.Navigation("SavedPlaylists");
+                });
+
+            modelBuilder.Entity("Gamify.Api.Data.UserGroup", b =>
+                {
+                    b.Navigation("Members");
                 });
 #pragma warning restore 612, 618
         }

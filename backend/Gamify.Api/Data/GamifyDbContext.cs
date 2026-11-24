@@ -12,6 +12,8 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
     public DbSet<StoreClick> StoreClicks => Set<StoreClick>();
     public DbSet<SavedPlaylist> SavedPlaylists => Set<SavedPlaylist>();
     public DbSet<AdminAuditLog> AdminAuditLogs => Set<AdminAuditLog>();
+    public DbSet<UserGroup> UserGroups => Set<UserGroup>();
+    public DbSet<UserGroupMember> UserGroupMembers => Set<UserGroupMember>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -20,6 +22,7 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
         modelBuilder.Entity<User>().Property(user => user.Email).HasMaxLength(254);
         modelBuilder.Entity<User>().Property(user => user.NormalizedEmail).HasMaxLength(254);
         modelBuilder.Entity<User>().Property(user => user.Role).HasMaxLength(32).HasDefaultValue("User");
+        modelBuilder.Entity<User>().Property(user => user.PreferredExperience).HasMaxLength(32);
         modelBuilder.Entity<User>().HasMany(user => user.Platforms).WithMany().UsingEntity("UserPlatforms");
 
         modelBuilder.Entity<Platform>().HasData(
@@ -50,6 +53,16 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
         modelBuilder.Entity<StoreClick>().HasIndex(click => new { click.StoreUrl, click.ClickedAt });
 
         modelBuilder.Entity<AdminAuditLog>().HasIndex(entry => entry.OccurredAt);
+
+        modelBuilder.Entity<UserGroup>().Property(group => group.Name).HasMaxLength(80);
+        modelBuilder.Entity<UserGroup>().HasOne<User>().WithMany()
+            .HasForeignKey(group => group.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<UserGroup>().HasIndex(group => new { group.OwnerUserId, group.CreatedAt });
+        modelBuilder.Entity<UserGroupMember>().HasOne(member => member.Group).WithMany(group => group.Members)
+            .HasForeignKey(member => member.GroupId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<UserGroupMember>().HasOne(member => member.User).WithMany(user => user.GroupMemberships)
+            .HasForeignKey(member => member.UserId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<UserGroupMember>().HasIndex(member => new { member.GroupId, member.UserId }).IsUnique();
         
 modelBuilder.Entity<QueryTemplate>().HasData(
     new QueryTemplate

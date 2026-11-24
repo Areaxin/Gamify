@@ -1,4 +1,5 @@
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || 'http://localhost:5218'
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
+  || 'http://127.0.0.1:5218'
 
 export async function api(path, { token, body, method = 'GET', signal, keepalive } = {}) {
   const headers = {}
@@ -17,7 +18,11 @@ export async function api(path, { token, body, method = 'GET', signal, keepalive
     : null
 
   if (!response.ok) {
-    const message = response.status === 429 ? 'Per daug bandymų. Pabandykite po minutės.' : 'Užklausos įvykdyti nepavyko.'
+    const message = response.status === 429
+      ? 'Per daug bandymų. Pabandykite po minutės.'
+      : response.status >= 500
+        ? 'Serverio klaida. Pabandykite dar kartą vėliau.'
+        : 'Užklausos įvykdyti nepavyko.'
     throw Object.assign(new Error(data?.message || message), { status: response.status })
   }
 

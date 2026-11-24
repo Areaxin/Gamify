@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Collections.Concurrent;
 using Gamify.Api.Ai;
 using Gamify.Api.Data;
 
@@ -6,9 +7,9 @@ namespace Gamify.Api;
 
 public sealed class LiveRecommendations(OpenAiResponsesClient ai, LiveStoreClient stores, ILogger<LiveRecommendations> logger)
 {
-    public async Task<SavedPlaylistGame[]> SearchAsync(
+    public async Task<RecommendationSearchResult> SearchAsync(
         string text, string[] platforms, int pcLevel, int age, int groupSize, CancellationToken cancellationToken,
-        FilterOverrides? overrides = null)
+        FilterOverrides? overrides = null, GroupMemberConstraint[]? groupMembers = null)
     {
         var ratings = AgeRatings.ForAge(age);
         var input = JsonSerializer.Serialize(new
@@ -46,6 +47,7 @@ public sealed class LiveRecommendations(OpenAiResponsesClient ai, LiveStoreClien
             .DistinctBy(candidate => candidate.Store!.Url).ToArray();
 
         using var checks = new SemaphoreSlim(4);
+        var blockerHits = new ConcurrentDictionary<string, ConcurrentDictionary<string, int>>(StringComparer.Ordinal);
         var verified = await Task.WhenAll(pending.Select(async candidate =>
         {
             var (game, store) = (candidate.Game, candidate.Store!);
@@ -55,11 +57,24 @@ public sealed class LiveRecommendations(OpenAiResponsesClient ai, LiveStoreClien
             finally { checks.Release(); }
             if (details is null || details.MinimumAge > age || players > 1 && details.Multiplayer == false ||
                 result.Filters.PlayerCount == 1 && players == 1 && details.SinglePlayer == false ||
-                store.Platform == "PC" && game.MinimumPcLevel is null && !details.HasPcRequirements ||
-                budget is { } max && (details.PriceCents is not { } price || price > max))
+                store.Platform == "PC" && game.MinimumPcLevel is null && !details.HasPcRequirements)
             {
                 logger.LogDebug("Store validation skipped {StoreUrl}. Store responded: {Available}; has price: {HasPrice}; multiplayer: {Multiplayer}.",
                     store.Url, details is not null, details?.PriceCents is not null, details?.Multiplayer);
+                return null;
+            }
+
+            var blockers = GroupConstraintEvaluator.FindBlockers(store.Platform, details.PriceCents,
+                game.Difficulty, budget, overrides?.Experience, groupMembers ?? []);
+            if (blockers.Length > 0)
+            {
+                foreach (var blocker in blockers)
+                {
+                    var constraints = blockerHits.GetOrAdd(blocker.Name,
+                        _ => new ConcurrentDictionary<string, int>(StringComparer.Ordinal));
+                    foreach (var constraint in blocker.Constraints)
+                        constraints.AddOrUpdate(constraint, 1, (_, count) => count + 1);
+                }
                 return null;
             }
 
@@ -80,7 +95,14 @@ public sealed class LiveRecommendations(OpenAiResponsesClient ai, LiveStoreClien
             .Select((game, index) => game with { Id = index + 1 }).ToArray();
         logger.LogInformation("Web search proposed {CandidateCount} games, {CheckedCount} reached storefront checks, and {ResultCount} matched.",
             result.Games.Length, pending.Length, recommendations.Length);
-        return recommendations;
+        var blockersResult = recommendations.Length > 0
+            ? []
+            : blockerHits.OrderByDescending(member => member.Value.Values.Sum()).ThenBy(member => member.Key)
+                .Select(member => new GroupConstraintBlocker(member.Key,
+                    member.Value.OrderByDescending(constraint => constraint.Value)
+                        .Select(constraint => constraint.Key).ToArray()))
+                .ToArray();
+        return new RecommendationSearchResult(recommendations, blockersResult);
 
         bool gameFits(WebGame game, StoreLink store)
         {
@@ -88,8 +110,6 @@ public sealed class LiveRecommendations(OpenAiResponsesClient ai, LiveStoreClien
                 game.Pegi > age || game.Esrb > age || game.MaxPlayers < players)
                 return false;
             if (store.Platform == "PC" && (game.MinimumPcLevel ?? 3) > pcLevel)
-                return false;
-            if (overrides?.Experience is { } level && game.Difficulty > (int)level)
                 return false;
 
             return !Enum.TryParse<GameMood>(result.Filters.Mood, true, out var mood) || (game.Moods & mood) != 0;
@@ -118,3 +138,6 @@ public sealed class LiveRecommendations(OpenAiResponsesClient ai, LiveStoreClien
             ? StoreLinks.Resolve(url)?.Url ?? (uri.GetLeftPart(UriPartial.Path).TrimEnd('/') + uri.Query)
             : null;
 }
+
+public sealed record RecommendationSearchResult(
+    SavedPlaylistGame[] Games, GroupConstraintBlocker[] BlockingMembers);

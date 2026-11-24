@@ -64,7 +64,7 @@ function App() {
 
   function reuseQuery(entry) {
     setSearchText(entry.text)
-    setForGroup(entry.forGroup && user.groupBirthDates.length > 0)
+    setForGroup(entry.forGroup)
     navigate('/')
   }
 
@@ -154,7 +154,7 @@ function App() {
           <Routes>
             <Route path="/" element={user ? (
               <Recommendations profile={user} token={session.token} onUnauthorized={clearSession}
-                text={searchText} setText={setSearchText} forGroup={forGroup && user.groupBirthDates.length > 0}
+                text={searchText} setText={setSearchText} forGroup={forGroup}
                 setForGroup={setForGroup} />
             ) : <Navigate to="/login" replace />} />
             <Route path="/profile" element={user ? (

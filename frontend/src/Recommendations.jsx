@@ -16,6 +16,12 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
   const [templates, setTemplates] = useState([])
   const [templatesLoading, setTemplatesLoading] = useState(false)
   const [templatesError, setTemplatesError] = useState('')
+  const [templatesRetry, setTemplatesRetry] = useState(0)
+  const [groups, setGroups] = useState([])
+  const [groupsStatus, setGroupsStatus] = useState('idle')
+  const [groupsError, setGroupsError] = useState('')
+  const [groupsRetry, setGroupsRetry] = useState(0)
+  const [selectedGroupId, setSelectedGroupId] = useState('')
   const [playlistName, setPlaylistName] = useState('')
   const [savingPlaylist, setSavingPlaylist] = useState(false)
   const [playlistMessage, setPlaylistMessage] = useState('')
@@ -35,6 +41,7 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
 
     async function loadTemplates() {
       setTemplatesLoading(true)
+      setTemplatesError('')
 
       try {
         const data = await api('/api/query-templates', {
@@ -56,7 +63,30 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
     loadTemplates()
 
     return () => request.abort()
-  }, [token, onUnauthorized])
+  }, [token, onUnauthorized, templatesRetry])
+
+  useEffect(() => {
+    if (!forGroup) return undefined
+    const request = new AbortController()
+
+    api('/api/groups', { token, signal: request.signal })
+      .then(data => {
+        if (request.signal.aborted) return
+        setGroups(data)
+        setGroupsStatus('loaded')
+        setSelectedGroupId(current => data.some(group => String(group.id) === current) ? current : '')
+      })
+      .catch(error => {
+        if (request.signal.aborted) return
+        if (error.status === 401) onUnauthorized()
+        else {
+          setGroupsError(errorMessage(error))
+          setGroupsStatus('error')
+        }
+      })
+
+    return () => request.abort()
+  }, [forGroup, token, onUnauthorized, groupsRetry])
 
   async function search(event) {
     event.preventDefault()
@@ -78,6 +108,12 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
       setError(filterError)
       return
     }
+    if (forGroup && !selectedGroupId) {
+      setError(groups.length > 0
+        ? 'Pasirinkite grupę paieškai.'
+        : 'Pirmiausia sukurkite grupę profilio puslapyje.')
+      return
+    }
 
     const request = new AbortController()
     activeRequest.current = request
@@ -86,7 +122,12 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
       setResult(await api('/api/recommendations', {
         method: 'POST',
         token,
-        body: { text, forGroup, filters: toRequestFilters(filters) },
+        body: {
+          text,
+          forGroup,
+          groupId: forGroup ? Number(selectedGroupId) : null,
+          filters: toRequestFilters(filters),
+        },
         signal: request.signal,
       }))
     } catch (error) {
@@ -158,18 +199,70 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
               <Search size={17} aria-hidden="true" /> {searching ? 'Ieškoma…' : 'Ieškoti žaidimų'}
             </button>
           </div>
-          {profile.groupBirthDates.length > 0 && (
-            <label className="platform">
-              <input type="checkbox" checked={forGroup} disabled={searching}
-                onChange={event => { setForGroup(event.target.checked); setResult(null) }} />
-              Ieškoti žaidimų grupei
-            </label>
+          <label className="platform">
+            <input type="checkbox" checked={forGroup} disabled={searching}
+              onChange={event => {
+                setForGroup(event.target.checked)
+                setSelectedGroupId('')
+                setGroupsStatus('idle')
+                setGroupsError('')
+                setResult(null)
+                setError('')
+              }} />
+            Ieškoti žaidimų grupei
+          </label>
+          {forGroup && (
+            <div className="recommendation-group-selector">
+              {groupsStatus === 'idle' && <p className="field-note" role="status">Įkeliamos grupės…</p>}
+              {groupsError && (
+                <div>
+                  <p className="error" role="alert">{groupsError}</p>
+                  <button type="button" className="secondary"
+                    onClick={() => {
+                      setGroupsError('')
+                      setGroupsStatus('idle')
+                      setGroupsRetry(value => value + 1)
+                    }}>Bandyti dar kartą</button>
+                </div>
+              )}
+              {groupsStatus === 'loaded' && !groupsError && groups.length === 0 && (
+                <p className="field-note">
+                  Dar neturite išsaugotų grupių. <Link to="/profile">Mano profilyje sukurkite grupę</Link>, kad galėtumėte ieškoti visiems jos nariams.
+                </p>
+              )}
+              {groups.length > 0 && (
+                <label>
+                  Grupė
+                  <select value={selectedGroupId} disabled={searching || groupsStatus !== 'loaded'}
+                    onChange={event => { setSelectedGroupId(event.target.value); setResult(null); setError('') }}>
+                    <option value="">Pasirinkite grupę</option>
+                    {groups.map(group => (
+                      <option key={group.id} value={group.id}>
+                        {group.name} — {group.members.map(member => member.name).join(', ')}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {groups.find(group => String(group.id) === selectedGroupId)?.members.map(member => (
+                <span className="field-note" key={member.id}>
+                  {member.name} ({member.email}) — {member.platforms.join(', ') || 'platformos nenurodytos'}
+                </span>
+              ))}
+            </div>
           )}
           {error && <p className="error" role="alert">{error}</p>}
           <div className="query-templates">
             <span className="field-note">Paieškos šablonai</span>
             {templatesLoading && <span className="field-note">Įkeliami…</span>}
-            {templatesError && <p className="error" role="alert">{templatesError}</p>}
+            {templatesError && (
+              <div>
+                <p className="error" role="alert">{templatesError}</p>
+                <button type="button" className="secondary" onClick={() => setTemplatesRetry(value => value + 1)}>
+                  Bandyti dar kartą
+                </button>
+              </div>
+            )}
             <div className="template-list">
               {templates.map(template => (
                 <button key={template.id} type="button" className="secondary" disabled={searching}
@@ -195,6 +288,15 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
       {result && result.games.length === 0 && (
         <div className="empty-playlist" role="status">
           <p>{result.message || 'Žaidimų pagal šią užklausą nerasta.'}</p>
+          {result.blockingMembers?.length > 0 && (
+            <ul className="blocking-members">
+              {result.blockingMembers.map((member, index) => (
+                <li key={`${member.name}-${index}`}>
+                  <strong>{member.name}</strong>: {member.constraints.join(', ')}
+                </li>
+              ))}
+            </ul>
+          )}
           <p className="field-note">Pabandykite pakeisti nuotaiką, biudžetą arba žaidėjų skaičių.</p>
         </div>
       )}

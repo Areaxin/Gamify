@@ -1,3 +1,5 @@
+using Gamify.Api.Data;
+
 namespace Gamify.Api;
 
 /// <summary>GAM-US13: patirties lygiai, kuriuos galima pasirinkti filtru.</summary>
@@ -58,4 +60,84 @@ public sealed record FilterOverrides(int? MaxBudgetCents, int? PlayerCount, Expe
 {
     /// <summary>Pavadinimas, kurį supranta <see cref="RecommendationScoring"/> ir DI schema.</summary>
     public string? ExperienceName => Experience?.ToString().ToLowerInvariant();
+}
+
+public sealed record GroupMemberConstraint(
+    string Name, int? MaxBudgetCents, ExperienceLevel? Experience, string[] Platforms);
+
+public sealed record GroupConstraintBlocker(string Name, string[] Constraints);
+
+public sealed record GroupRecommendationProfile(
+    HashSet<int> SharedPlatformIds, int PcLevel, int Age, int GroupSize, GroupMemberConstraint[] Participants)
+{
+    public static GroupRecommendationProfile FromMembers(
+        IEnumerable<User> users, int requesterUserId, DateOnly today)
+    {
+        var members = users.ToArray();
+        if (members.Length == 0 || members.Any(member => member.BirthDate is null))
+            throw new ArgumentException("All group members must have a saved birth date.", nameof(users));
+
+        var sharedPlatformIds = members[0].Platforms.Select(platform => platform.Id).ToHashSet();
+        foreach (var member in members.Skip(1))
+            sharedPlatformIds.IntersectWith(member.Platforms.Select(platform => platform.Id));
+
+        var age = AgeRatings.AgeOn(members.Max(member => member.BirthDate!.Value), today);
+        var pcLevel = members.Where(member => member.Platforms.Any(platform => platform.Id == Platform.PcId))
+            .Select(member => PcSpecs.Rank(member.PcLevel)).DefaultIfEmpty(0).Min();
+        var participants = members.Select(member => new GroupMemberConstraint(
+            member.Id == requesterUserId ? "Jūs" : member.Name,
+            member.PreferredBudgetCents,
+            ParseExperience(member.PreferredExperience),
+            member.Platforms.Select(platform => platform.Name).ToArray())).ToArray();
+
+        return new(sharedPlatformIds, pcLevel, age, members.Length, participants);
+    }
+
+    private static ExperienceLevel? ParseExperience(string? value) =>
+        Enum.TryParse<ExperienceLevel>(value, true, out var level) && Enum.IsDefined(level)
+            ? level
+            : null;
+}
+
+public static class GroupConstraintEvaluator
+{
+    public static GroupConstraintBlocker[] FindBlockers(
+        string platform,
+        int? priceCents,
+        int difficulty,
+        int? requesterBudgetCents,
+        ExperienceLevel? requesterExperience,
+        IEnumerable<GroupMemberConstraint> participants)
+    {
+        var blockers = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var participant in participants)
+        {
+            if (!participant.Platforms.Contains(platform, StringComparer.Ordinal))
+                Add(participant.Name, "platformos");
+            if (participant.MaxBudgetCents is { } memberBudget &&
+                (priceCents is not { } memberPrice || memberPrice > memberBudget))
+                Add(participant.Name, "biudžetas");
+            if (participant.Experience is { } memberExperience && difficulty > (int)memberExperience)
+                Add(participant.Name, "patirtis");
+        }
+
+        if (requesterBudgetCents is { } maxBudget &&
+            (priceCents is not { } price || price > maxBudget))
+            Add("Jūs", "biudžetas");
+        if (requesterExperience is { } experience && difficulty > (int)experience)
+            Add("Jūs", "patirtis");
+
+        return blockers.Select(blocker =>
+            new GroupConstraintBlocker(blocker.Key, blocker.Value.Order(StringComparer.Ordinal).ToArray())).ToArray();
+
+        void Add(string name, string constraint)
+        {
+            if (!blockers.TryGetValue(name, out var constraints))
+            {
+                constraints = new HashSet<string>(StringComparer.Ordinal);
+                blockers.Add(name, constraints);
+            }
+            constraints.Add(constraint);
+        }
+    }
 }
