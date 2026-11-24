@@ -172,10 +172,54 @@ form p, .auth-panel > p:last-child {
 
 .recommendations li {
   display: grid;
-  gap: 0.25rem;
+  grid-template-columns: minmax(5rem, 8rem) minmax(0, 1fr);
+  gap: 1rem;
   padding: 0.75rem;
   border: 1px solid #dce2ed;
   border-radius: 0.4rem;
+}
+
+.game-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 0.3rem;
+  background: #e8ebf3;
+}
+
+.game-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.game-details h3 {
+  margin: 0;
+}
+
+.game-details p {
+  margin: 0.15rem 0;
+}
+
+.match-score {
+  color: #30398d;
+}
+
+.empty-playlist {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f3f5fa;
+  border-radius: 0.4rem;
+}
+
+.empty-playlist p {
+  margin: 0;
+}
+
+.empty-playlist .field-note {
+  margin-top: 0.35rem;
 }
 
 footer {

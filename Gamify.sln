@@ -7,6 +7,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{3D87
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gamify.Api", "backend\Gamify.Api\Gamify.Api.csproj", "{A9C66378-3890-4EB8-A5FA-B11E11042245}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gamify.Api.Tests", "backend\Gamify.Api.Tests\Gamify.Api.Tests.csproj", "{D37EA45B-126A-4C6D-BE00-925573A3DF51}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,6 +22,10 @@ Global
 		{A9C66378-3890-4EB8-A5FA-B11E11042245}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A9C66378-3890-4EB8-A5FA-B11E11042245}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A9C66378-3890-4EB8-A5FA-B11E11042245}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D37EA45B-126A-4C6D-BE00-925573A3DF51}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D37EA45B-126A-4C6D-BE00-925573A3DF51}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D37EA45B-126A-4C6D-BE00-925573A3DF51}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D37EA45B-126A-4C6D-BE00-925573A3DF51}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{A9C66378-3890-4EB8-A5FA-B11E11042245} = {3D87886A-382F-4F84-8D83-562BF32C804C}

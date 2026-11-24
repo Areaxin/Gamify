@@ -75,28 +75,40 @@ public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponse
         var groupSize = request.ForGroup ? user.GroupMembers.Count + 1 : 1;
         var playerCount = Math.Max(filters.PlayerCount ?? 1, groupSize);
         query = query.Where(game => game.MaxPlayers >= playerCount);
-        if (Enum.TryParse<GameMood>(filters.Mood, ignoreCase: true, out var mood))
-            query = query.Where(game => (game.Moods & mood) != 0);
-        var difficulty = filters.Experience switch { "beginner" => 1, "intermediate" => 2, _ => 3 };
-        query = query.Where(game => game.Difficulty <= difficulty);
 
-        var games = await query.OrderBy(game => game.PriceCents).ThenBy(game => game.Title).ThenBy(game => game.Id)
-            .Take(10).Include(game => game.Platforms).ToListAsync(cancellationToken);
-        if (games.Count < 5)
-            return Ok(new { games = Array.Empty<RecommendedGame>(), message = "Nieko nerasta." });
+        var games = await query.Include(game => game.Platforms).ToListAsync(cancellationToken);
+        int? requestedPlayerCount = filters.PlayerCount is not null || request.ForGroup ? playerCount : null;
+        var recommendations = games.Select(game =>
+            {
+                var match = RecommendationScoring.Calculate(game, filters.Mood, filters.MaxBudgetCents,
+                    requestedPlayerCount, filters.Experience);
+                var platforms = game.Platforms.Where(platform =>
+                        platformIds.Contains(platform.Id) &&
+                        (platform.Id != Platform.PcId || game.MinimumPcLevel <= pcLevel))
+                    .OrderBy(platform => platform.Id).Select(platform => platform.Name).ToArray();
 
-        return Ok(new
-        {
-            games = games.Select(game => new RecommendedGame(game.Id, game.Title, game.PriceCents, game.MaxPlayers,
-                game.PegiAge, AgeRatings.EsrbLabel(game.EsrbAge), game.Platforms.Where(platform =>
-                    platformIds.Contains(platform.Id) &&
-                    (platform.Id != Platform.PcId || game.MinimumPcLevel <= pcLevel))
-                    .OrderBy(platform => platform.Id).Select(platform => platform.Name).ToArray()))
-        });
+                return new RecommendedGame(game.Id, game.Title, GameCoverImages.For(game.Id, game.Title),
+                    game.PriceCents, platforms, match.Percentage, match.Explanation, game.MaxPlayers, game.PegiAge,
+                    AgeRatings.EsrbLabel(game.EsrbAge));
+            })
+            .OrderByDescending(game => game.MatchPercentage)
+            .ThenBy(game => game.Title)
+            .ThenBy(game => game.Id)
+            .Take(10)
+            .ToArray();
+        if (recommendations.Length == 0)
+            return Ok(new
+            {
+                games = recommendations,
+                message = "Nieko nerasta."
+            });
+
+        return Ok(new { games = recommendations });
     }
 }
 
 public sealed record RecommendationRequest(string? Text, bool ForGroup = false);
 
 public sealed record RecommendedGame(
-    int Id, string Title, int PriceCents, int MaxPlayers, int? Pegi, string? Esrb, string[] Platforms);
+    int Id, string Title, string CoverImageUrl, int PriceCents, string[] Platforms, int MatchPercentage,
+    string Explanation, int MaxPlayers, int? Pegi, string? Esrb);
