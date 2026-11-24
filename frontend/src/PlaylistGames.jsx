@@ -19,7 +19,7 @@ export default function PlaylistGames({ games, renderAction }) {
         <li key={game.id}>
           <img
             className="game-cover"
-            src={game.coverImageUrl}
+            src={game.coverImageUrl || fallbackCover(game.title)}
             alt={`„${game.title}“ viršelis`}
             loading="lazy"
             onError={event => {
@@ -32,13 +32,16 @@ export default function PlaylistGames({ games, renderAction }) {
             <h3>{game.title}</h3>
             <strong className="match-score">{game.matchPercentage}% atitikimas</strong>
             <p>{game.explanation}</p>
-            <span><strong>Kaina:</strong> {game.priceCents ? euro.format(game.priceCents / 100) : 'Nemokamas'}</span>
+            <span><strong>Kaina:</strong> {game.priceCents == null ? 'Kainą žiūrėkite parduotuvėje'
+              : game.priceCents === 0 ? 'Nemokamas' : euro.format(game.priceCents / 100)}</span>
             <span><strong>Platformos:</strong> {game.platforms.join(', ')}</span>
             <span className="field-note">
               {game.maxPlayers === 1 ? '1 žaidėjas' : `Iki ${game.maxPlayers} žaidėjų`}
               {game.pegi != null && ` · PEGI ${game.pegi}`}
               {game.esrb && ` · ESRB ${game.esrb}`}
             </span>
+            {game.ratingUrl && <a className="field-note" href={game.ratingUrl} target="_blank"
+              rel="noopener noreferrer">Amžiaus reitingo šaltinis</a>}
             {renderAction?.(game)}
           </div>
         </li>

@@ -2,6 +2,10 @@
 const allowedHosts = new Map([
   ['store.steampowered.com', 'Steam'],
   ['store.epicgames.com', 'Epic Games'],
+  ['store.playstation.com', 'PlayStation Store'],
+  ['www.xbox.com', 'Xbox Store'],
+  ['www.microsoft.com', 'Xbox Store'],
+  ['www.nintendo.com', 'Nintendo eShop'],
 ])
 
 export function trustedStoreLink(url) {
