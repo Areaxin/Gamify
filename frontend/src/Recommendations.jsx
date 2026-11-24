@@ -123,6 +123,7 @@ export default function Recommendations({ profile, token, onUnauthorized }) {
           )}
           {error && <p className="error" role="alert">{error}</p>}
           <button type="submit" disabled={searching}>{searching ? 'Ieškoma…' : 'Ieškoti žaidimų'}</button>
+          {searching && <p role="status" aria-live="polite">Užklausa apdorojama. Tai gali užtrukti iki 15 sekundžių.</p>}
         </form>
       )}
       {result?.message && <p role="status">{result.message}</p>}
