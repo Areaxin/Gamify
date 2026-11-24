@@ -86,10 +86,11 @@ public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponse
                         platformIds.Contains(platform.Id) &&
                         (platform.Id != Platform.PcId || game.MinimumPcLevel <= pcLevel))
                     .OrderBy(platform => platform.Id).Select(platform => platform.Name).ToArray();
+                var store = StoreLinks.Resolve(game.StoreUrl);
 
                 return new RecommendedGame(game.Id, game.Title, GameCoverImages.For(game.Id, game.Title),
                     game.PriceCents, platforms, match.Percentage, match.Explanation, game.MaxPlayers, game.PegiAge,
-                    AgeRatings.EsrbLabel(game.EsrbAge));
+                    AgeRatings.EsrbLabel(game.EsrbAge), store?.Url, store?.Store);
             })
             .OrderByDescending(game => game.MatchPercentage)
             .ThenBy(game => game.Title)
@@ -104,29 +105,6 @@ public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponse
             });
 
         return Ok(new { games = recommendations });
-        if (Enum.TryParse<GameMood>(filters.Mood, ignoreCase: true, out var mood))
-            query = query.Where(game => (game.Moods & mood) != 0);
-        var difficulty = filters.Experience switch { "beginner" => 1, "intermediate" => 2, _ => 3 };
-        query = query.Where(game => game.Difficulty <= difficulty);
-
-        var games = await query.OrderBy(game => game.PriceCents).ThenBy(game => game.Title).ThenBy(game => game.Id)
-            .Take(10).Include(game => game.Platforms).ToListAsync(cancellationToken);
-        if (games.Count < 5)
-            return Ok(new { games = Array.Empty<RecommendedGame>(), message = "Nieko nerasta." });
-
-        return Ok(new
-        {
-            games = games.Select(game =>
-            {
-                var store = StoreLinks.Resolve(game.StoreUrl);
-                return new RecommendedGame(game.Id, game.Title, game.PriceCents, game.MaxPlayers,
-                    game.PegiAge, AgeRatings.EsrbLabel(game.EsrbAge), game.Platforms.Where(platform =>
-                        platformIds.Contains(platform.Id) &&
-                        (platform.Id != Platform.PcId || game.MinimumPcLevel <= pcLevel))
-                        .OrderBy(platform => platform.Id).Select(platform => platform.Name).ToArray(),
-                    store?.Url, store?.Store);
-            })
-        });
     }
 }
 
@@ -135,6 +113,4 @@ public sealed record RecommendationRequest(string? Text, bool ForGroup = false);
 /// <param name="StoreUrl">Tik iš <see cref="StoreLinks.AllowedHosts"/> domenų; null, jei nuoroda nežinoma.</param>
 public sealed record RecommendedGame(
     int Id, string Title, string CoverImageUrl, int PriceCents, string[] Platforms, int MatchPercentage,
-    string Explanation, int MaxPlayers, int? Pegi, string? Esrb);
-    int Id, string Title, int PriceCents, int MaxPlayers, int? Pegi, string? Esrb, string[] Platforms,
-    string? StoreUrl, string? StoreName);
+    string Explanation, int MaxPlayers, int? Pegi, string? Esrb, string? StoreUrl, string? StoreName);
