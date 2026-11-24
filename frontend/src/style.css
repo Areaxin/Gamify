@@ -207,6 +207,10 @@ form p, .auth-panel > p:last-child {
   color: #30398d;
 }
 
+.remove-game {
+  margin-top: 0.35rem;
+}
+
 .empty-playlist {
   margin-top: 1.5rem;
   padding: 1rem;

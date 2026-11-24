@@ -10,6 +10,7 @@ export default function SavedPlaylists({ token, onUnauthorized }) {
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [removingGameId, setRemovingGameId] = useState(null)
 
   useEffect(() => {
     const request = new AbortController()
@@ -83,6 +84,28 @@ export default function SavedPlaylists({ token, onUnauthorized }) {
     }
   }
 
+  async function removeGame(playlistId, game) {
+    if (!window.confirm(`Pašalinti „${game.title}“ iš išsaugoto grojaraščio?`))
+      return
+
+    setError('')
+    setRemovingGameId(game.id)
+    try {
+      await api(`/api/saved-playlists/${playlistId}/games/${game.id}`, {
+        method: 'DELETE',
+        token,
+      })
+      setOpened(current => current?.id === playlistId
+        ? { ...current, games: current.games.filter(item => item.id !== game.id) }
+        : current)
+    } catch (error) {
+      if (error.status === 401) onUnauthorized()
+      else setError(errorMessage(error))
+    } finally {
+      setRemovingGameId(null)
+    }
+  }
+
   return (
     <section className="saved-playlists">
       <h2>Išsaugoti grojaraščiai</h2>
@@ -137,8 +160,25 @@ export default function SavedPlaylists({ token, onUnauthorized }) {
               {opened?.id === playlist.id && (
                 <div className="opened-playlist">
                   <h3>{opened.name}</h3>
-                  <PlaylistGames games={opened.games}
-                    renderAction={game => <StoreButton game={game} token={token} />} />
+                  {opened.games.length === 0 ? (
+                    <p className="field-note">Šiame grojaraštyje žaidimų nėra.</p>
+                  ) : (
+                    <PlaylistGames games={opened.games}
+                      renderAction={game => (
+                        <>
+                          <StoreButton game={game} token={token} />
+                          <button
+                            type="button"
+                            className="secondary remove-game"
+                            disabled={busy || removingGameId !== null}
+                            onClick={() => removeGame(playlist.id, game)}
+                          >
+                            {removingGameId === game.id ? 'Šalinama…' : 'Pašalinti'}
+                          </button>
+                        </>
+                      )}
+                    />
+                  )}
                 </div>
               )}
             </li>
