@@ -5,13 +5,8 @@ import PlaylistGames from './PlaylistGames'
 import StoreButton from './StoreButton'
 import SearchFilters, { emptyFilters, toRequestFilters, validateFilters } from './SearchFilters'
 
-<<<<<<< HEAD
 export default function Recommendations({ profile, token, onUnauthorized, text, setText, forGroup, setForGroup }) {
-=======
-export default function Recommendations({ profile, token, onUnauthorized, text, setText }) {
-  const [forGroup, setForGroup] = useState(false)
   const [filters, setFilters] = useState(emptyFilters)
->>>>>>> origin/feature/GAM-US13
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [searching, setSearching] = useState(false)
