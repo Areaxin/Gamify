@@ -15,7 +15,7 @@ namespace Gamify.Api.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.15");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.34");
 
             modelBuilder.Entity("GamePlatforms", b =>
                 {
@@ -564,73 +564,6 @@ namespace Gamify.Api.Migrations
                         {
                             Id = 4,
                             Name = "Switch"
-                        });
-                });
-
-            modelBuilder.Entity("Gamify.Api.Data.QueryTemplate", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Text")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("QueryTemplates");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            IsActive = true,
-                            SortOrder = 1,
-                            Text = "Ieškau ramaus žaidimo vienam, iki 15 eurų, pradedantiesiems.",
-                            Title = "Ramus žaidimas vienam"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            IsActive = true,
-                            SortOrder = 2,
-                            Text = "Ieškau smagaus žaidimo dviem žmonėms, kurį galėčiau žaisti su draugu.",
-                            Title = "Žaidimas dviem draugams"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            IsActive = true,
-                            SortOrder = 3,
-                            Text = "Ieškau siaubo žaidimo su gera istorija ir įtempta atmosfera.",
-                            Title = "Siaubo žaidimas"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            IsActive = true,
-                            SortOrder = 4,
-                            Text = "Ieškau smagaus žaidimo keturiems draugams, iki 20 eurų.",
-                            Title = "Žaidimas keturiems draugams"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            IsActive = true,
-                            SortOrder = 5,
-                            Text = "Ieškau lengvai išmokstamo žaidimo pradedantiesiems.",
-                            Title = "Žaidimas pradedantiesiems"
                         });
                 });
 
