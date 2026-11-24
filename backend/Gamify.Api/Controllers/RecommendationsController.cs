@@ -1,9 +1,7 @@
 using System.Text;
 using System.Text.Json;
-using System.Security.Cryptography;
 using Gamify.Api.Ai;
 using Gamify.Api.Data;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -15,7 +13,7 @@ namespace Gamify.Api.Controllers;
 [Authorize]
 [Route("api/recommendations")]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponsesClient ai, IMemoryCache cache) : ControllerBase
+public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponsesClient ai) : ControllerBase
 {
     [HttpPost]
     [EnableRateLimiting("recommendations")]
@@ -42,20 +40,6 @@ public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponse
         if (!ai.IsConfigured)
             return StatusCode(503, new { message = "Rekomendacijoms dar nesukonfigūruotas OpenAI raktas arba modelis." });
 
-        var cacheInput = JsonSerializer.Serialize(new
-        {
-            userId,
-            text = request.Text.Trim(),
-            request.ForGroup,
-            birthDate,
-            platforms = user.Platforms.Select(platform => platform.Id).Order().ToArray(),
-            pcLevel = user.PcLevel,
-            groupBirthDates = user.GroupMembers.Select(member => member.BirthDate).Order().ToArray()
-        });
-        var cacheKey = "recommendations:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(cacheInput)));
-        if (cache.TryGetValue<RecommendationResponse>(cacheKey, out var cached))
-            return Ok(cached);
-
         var youngest = request.ForGroup
             ? user.GroupMembers.Select(member => member.BirthDate).Append(birthDate).Max()
             : birthDate;
@@ -63,10 +47,8 @@ public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponse
         RecommendationPrompt filters;
         try
         {
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(15));
             var text = await ai.GetStructuredTextAsync(request.Text.Trim(), RecommendationPrompt.Instructions,
-                "game_filters", RecommendationPrompt.Schema, timeout.Token);
+                "game_filters", RecommendationPrompt.Schema, cancellationToken);
             filters = RecommendationPrompt.Parse(text);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -93,34 +75,40 @@ public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponse
         var groupSize = request.ForGroup ? user.GroupMembers.Count + 1 : 1;
         var playerCount = Math.Max(filters.PlayerCount ?? 1, groupSize);
         query = query.Where(game => game.MaxPlayers >= playerCount);
-        if (Enum.TryParse<GameMood>(filters.Mood, ignoreCase: true, out var mood))
-            query = query.Where(game => (game.Moods & mood) != 0);
-        var difficulty = filters.Experience switch { "beginner" => 1, "intermediate" => 2, _ => 3 };
-        query = query.Where(game => game.Difficulty <= difficulty);
 
-        var games = await query.OrderBy(game => game.PriceCents).ThenBy(game => game.Title).ThenBy(game => game.Id)
-            .Take(10).Include(game => game.Platforms).ToListAsync(cancellationToken);
-        if (games.Count < 5)
-        {
-            var empty = new RecommendationResponse([], "Nieko nerasta.");
-            cache.Set(cacheKey, empty, TimeSpan.FromMinutes(10));
-            return Ok(empty);
-        }
+        var games = await query.Include(game => game.Platforms).ToListAsync(cancellationToken);
+        int? requestedPlayerCount = filters.PlayerCount is not null || request.ForGroup ? playerCount : null;
+        var recommendations = games.Select(game =>
+            {
+                var match = RecommendationScoring.Calculate(game, filters.Mood, filters.MaxBudgetCents,
+                    requestedPlayerCount, filters.Experience);
+                var platforms = game.Platforms.Where(platform =>
+                        platformIds.Contains(platform.Id) &&
+                        (platform.Id != Platform.PcId || game.MinimumPcLevel <= pcLevel))
+                    .OrderBy(platform => platform.Id).Select(platform => platform.Name).ToArray();
 
-        var result = new RecommendationResponse(
-            games.Select(game => new RecommendedGame(game.Id, game.Title, game.PriceCents, game.MaxPlayers,
-                game.PegiAge, AgeRatings.EsrbLabel(game.EsrbAge), game.Platforms.Where(platform =>
-                    platformIds.Contains(platform.Id) &&
-                    (platform.Id != Platform.PcId || game.MinimumPcLevel <= pcLevel))
-                    .OrderBy(platform => platform.Id).Select(platform => platform.Name).ToArray())).ToArray());
-        cache.Set(cacheKey, result, TimeSpan.FromMinutes(10));
-        return Ok(result);
+                return new RecommendedGame(game.Id, game.Title, GameCoverImages.For(game.Id, game.Title),
+                    game.PriceCents, platforms, match.Percentage, match.Explanation, game.MaxPlayers, game.PegiAge,
+                    AgeRatings.EsrbLabel(game.EsrbAge));
+            })
+            .OrderByDescending(game => game.MatchPercentage)
+            .ThenBy(game => game.Title)
+            .ThenBy(game => game.Id)
+            .Take(10)
+            .ToArray();
+        if (recommendations.Length == 0)
+            return Ok(new
+            {
+                games = recommendations,
+                message = "Nieko nerasta."
+            });
+
+        return Ok(new { games = recommendations });
     }
 }
 
 public sealed record RecommendationRequest(string? Text, bool ForGroup = false);
 
 public sealed record RecommendedGame(
-    int Id, string Title, int PriceCents, int MaxPlayers, int? Pegi, string? Esrb, string[] Platforms);
-
-public sealed record RecommendationResponse(RecommendedGame[] Games, string? Message = null);
+    int Id, string Title, string CoverImageUrl, int PriceCents, string[] Platforms, int MatchPercentage,
+    string Explanation, int MaxPlayers, int? Pegi, string? Esrb);
