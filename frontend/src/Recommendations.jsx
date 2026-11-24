@@ -163,7 +163,15 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
           )}
           {error && <p className="error" role="alert">{error}</p>}
           <button type="submit" disabled={searching}>{searching ? 'Ieškoma…' : 'Ieškoti žaidimų'}</button>
-          {searching && <p role="status">Ieškoma žaidimų internete ir tikrinamos kainos…</p>}
+          {searching && (
+            <div className="search-progress" role="status" aria-live="polite" aria-busy="true">
+              <span className="search-spinner" aria-hidden="true" />
+              <div>
+                <strong>Ieškome žaidimų jums</strong>
+                <p>AI ieško žaidimų internete ir tikrina jų kainas. Tai gali užtrukti kelias akimirkas…</p>
+              </div>
+            </div>
+          )}
         </form>
       )}
       {result && result.games.length === 0 && (
