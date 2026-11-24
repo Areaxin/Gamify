@@ -8,7 +8,6 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
     public DbSet<Platform> Platforms => Set<Platform>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<Game> Games => Set<Game>();
-    public DbSet<QueryTemplate> QueryTemplates => Set<QueryTemplate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,48 +31,5 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
         modelBuilder.Entity<UserSession>().HasOne<User>().WithMany()
             .HasForeignKey(session => session.UserId);
         modelBuilder.Entity<UserSession>().HasIndex(session => session.ExpiresAt);
-        
-modelBuilder.Entity<QueryTemplate>().HasData(
-    new QueryTemplate
-    {
-        Id = 1,
-        Title = "Ramus žaidimas vienam",
-        Text = "Ieškau ramaus žaidimo vienam, iki 15 eurų, pradedantiesiems.",
-        SortOrder = 1,
-        IsActive = true
-    },
-    new QueryTemplate
-    {
-        Id = 2,
-        Title = "Žaidimas dviem draugams",
-        Text = "Ieškau smagaus žaidimo dviem žmonėms, kurį galėčiau žaisti su draugu.",
-        SortOrder = 2,
-        IsActive = true
-    },
-    new QueryTemplate
-    {
-        Id = 3,
-        Title = "Siaubo žaidimas",
-        Text = "Ieškau siaubo žaidimo su gera istorija ir įtempta atmosfera.",
-        SortOrder = 3,
-        IsActive = true
-    },
-    new QueryTemplate
-    {
-        Id = 4,
-        Title = "Žaidimas keturiems draugams",
-        Text = "Ieškau smagaus žaidimo keturiems draugams, iki 20 eurų.",
-        SortOrder = 4,
-        IsActive = true
-    },
-    new QueryTemplate
-    {
-        Id = 5,
-        Title = "Žaidimas pradedantiesiems",
-        Text = "Ieškau lengvai išmokstamo žaidimo pradedantiesiems.",
-        SortOrder = 5,
-        IsActive = true
-    });
-
     }
 }
