@@ -11,4 +11,5 @@ public sealed class User
     public DateOnly? BirthDate { get; set; }
     public List<Platform> Platforms { get; set; } = [];
     public List<GroupMember> GroupMembers { get; set; } = [];
+    public List<SavedPlaylist> SavedPlaylists { get; set; } = [];
 }

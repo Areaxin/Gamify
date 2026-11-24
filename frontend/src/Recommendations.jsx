@@ -1,20 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, errorMessage } from './api'
-
-const euro = new Intl.NumberFormat('lt-LT', { style: 'currency', currency: 'EUR' })
-
-function fallbackCover(title) {
-  const safeTitle = title.replace(/[&<>"']/g, character => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&apos;',
-  })[character])
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600"><rect width="400" height="600" fill="#4049aa"/><circle cx="200" cy="210" r="95" fill="#fff" fill-opacity=".12"/><path d="M140 210h120m-60-60v120" stroke="#fff" stroke-opacity=".7" stroke-width="12"/><text x="200" y="390" fill="#fff" font-family="sans-serif" font-size="30" text-anchor="middle">${safeTitle}</text></svg>`
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`
-}
+import PlaylistGames from './PlaylistGames'
 
 export default function Recommendations({ profile, token, onUnauthorized }) {
   const [text, setText] = useState('')
@@ -27,6 +14,10 @@ export default function Recommendations({ profile, token, onUnauthorized }) {
   const [templates, setTemplates] = useState([])
   const [templatesLoading, setTemplatesLoading] = useState(false)
   const [templatesError, setTemplatesError] = useState('')
+  const [playlistName, setPlaylistName] = useState('')
+  const [savingPlaylist, setSavingPlaylist] = useState(false)
+  const [playlistMessage, setPlaylistMessage] = useState('')
+  const [playlistError, setPlaylistError] = useState('')
 
   useEffect(() => () => activeRequest.current?.abort(), [])
   useEffect(() => {
@@ -55,7 +46,7 @@ export default function Recommendations({ profile, token, onUnauthorized }) {
     loadTemplates()
 
     return () => request.abort()
-  }, [token])
+  }, [token, onUnauthorized])
 
   async function search(event) {
     event.preventDefault()
@@ -86,6 +77,39 @@ export default function Recommendations({ profile, token, onUnauthorized }) {
       else setError(errorMessage(error))
     } finally {
       if (!request.signal.aborted) setSearching(false)
+    }
+  }
+
+  async function savePlaylist(event) {
+    event.preventDefault()
+    setPlaylistMessage('')
+    setPlaylistError('')
+    if (!playlistName.trim() || playlistName.trim().length > 100) {
+      setPlaylistError('Įveskite grojaraščio pavadinimą (iki 100 simbolių).')
+      return
+    }
+
+    setSavingPlaylist(true)
+    try {
+      const saved = await api('/api/saved-playlists', {
+        method: 'POST',
+        token,
+        body: {
+          name: playlistName,
+          games: result.games.map(({ id, matchPercentage, explanation }) => ({
+            id,
+            matchPercentage,
+            explanation,
+          })),
+        },
+      })
+      setPlaylistMessage(`Grojaraštis „${saved.name}“ išsaugotas. Jį rasite profilyje.`)
+      setPlaylistName('')
+    } catch (error) {
+      if (error.status === 401) onUnauthorized()
+      else setPlaylistError(errorMessage(error))
+    } finally {
+      setSavingPlaylist(false)
     }
   }
 
@@ -148,35 +172,25 @@ export default function Recommendations({ profile, token, onUnauthorized }) {
         <section className="recommendations">
           <h2>Jūsų žaidimų grojaraštis</h2>
           <p className="field-note">Katalogo kainos orientacinės.</p>
-          <ul>
-            {result.games.map(game => (
-              <li key={game.id}>
-                <img
-                  className="game-cover"
-                  src={game.coverImageUrl}
-                  alt={`„${game.title}“ viršelis`}
-                  loading="lazy"
-                  onError={event => {
-                    const image = event.currentTarget
-                    image.onerror = null
-                    image.src = fallbackCover(game.title)
-                  }}
-                />
-                <div className="game-details">
-                  <h3>{game.title}</h3>
-                  <strong className="match-score">{game.matchPercentage}% atitikimas</strong>
-                  <p>{game.explanation}</p>
-                  <span><strong>Kaina:</strong> {game.priceCents ? euro.format(game.priceCents / 100) : 'Nemokamas'}</span>
-                  <span><strong>Platformos:</strong> {game.platforms.join(', ')}</span>
-                  <span className="field-note">
-                    {game.maxPlayers === 1 ? '1 žaidėjas' : `Iki ${game.maxPlayers} žaidėjų`}
-                    {game.pegi != null && ` · PEGI ${game.pegi}`}
-                    {game.esrb && ` · ESRB ${game.esrb}`}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <PlaylistGames games={result.games} />
+          <form className="save-playlist-form" onSubmit={savePlaylist}>
+            <label>
+              Išsaugoti grojaraštį pavadinimu
+              <input
+                required
+                maxLength={100}
+                value={playlistName}
+                onChange={event => setPlaylistName(event.target.value)}
+                placeholder="Pavyzdžiui, Žaidimai savaitgaliui"
+                disabled={savingPlaylist}
+              />
+            </label>
+            {playlistError && <p className="error" role="alert">{playlistError}</p>}
+            {playlistMessage && <p role="status">{playlistMessage}</p>}
+            <button type="submit" disabled={savingPlaylist}>
+              {savingPlaylist ? 'Išsaugoma…' : 'Išsaugoti grojaraštį'}
+            </button>
+          </form>
         </section>
       )}
     </section>

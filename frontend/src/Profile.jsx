@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, errorMessage } from './api'
+import SavedPlaylists from './SavedPlaylists'
 
 function ratingText(rating) {
   return [rating.pegi && `PEGI ${rating.pegi}`, `ESRB ${rating.esrb}`].filter(Boolean).join(' / ')
@@ -86,6 +87,7 @@ export default function Profile({ token, onUnauthorized, onSave }) {
       {error && <p className="error" role="alert">{error}</p>}
       {!profile && !error && <p role="status">Įkeliamas profilis…</p>}
       {profile && options && (
+        <>
         <form onSubmit={submit} noValidate>
           <label>
             Vardas
@@ -152,6 +154,8 @@ export default function Profile({ token, onUnauthorized, onSave }) {
           {saved && <p role="status">Profilis išsaugotas.</p>}
           <button type="submit" disabled={saving}>Išsaugoti</button>
         </form>
+        <SavedPlaylists token={token} onUnauthorized={onUnauthorized} />
+        </>
       )}
     </section>
   )
