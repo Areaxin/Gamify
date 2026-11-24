@@ -9,6 +9,7 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<Game> Games => Set<Game>();
     public DbSet<QueryTemplate> QueryTemplates => Set<QueryTemplate>();
+    public DbSet<StoreClick> StoreClicks => Set<StoreClick>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,6 +33,11 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
         modelBuilder.Entity<UserSession>().HasOne<User>().WithMany()
             .HasForeignKey(session => session.UserId);
         modelBuilder.Entity<UserSession>().HasIndex(session => session.ExpiresAt);
+
+        modelBuilder.Entity<StoreClick>().HasOne<User>().WithMany().HasForeignKey(click => click.UserId);
+        modelBuilder.Entity<StoreClick>().HasOne<Game>().WithMany().HasForeignKey(click => click.GameId);
+        modelBuilder.Entity<StoreClick>().Property(click => click.Store).HasMaxLength(40);
+        modelBuilder.Entity<StoreClick>().HasIndex(click => new { click.GameId, click.ClickedAt });
         
 modelBuilder.Entity<QueryTemplate>().HasData(
     new QueryTemplate

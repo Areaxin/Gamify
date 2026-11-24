@@ -178,6 +178,52 @@ form p, .auth-panel > p:last-child {
   border-radius: 0.4rem;
 }
 
+.store-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.store-button {
+  justify-self: start;
+  padding: 0.4rem 0.85rem;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  background: #4049aa;
+  border: 1px solid #4049aa;
+  border-radius: 0.4rem;
+}
+
+a.store-button:hover {
+  background: #343c91;
+}
+
+a.store-button:focus-visible {
+  outline: 3px solid #8f97e6;
+  outline-offset: 2px;
+}
+
+button.store-button:disabled {
+  color: #6b7486;
+  background: #eef1f6;
+  border-color: #c9d0dc;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 footer {
   margin: 1rem;
   color: #505d70;

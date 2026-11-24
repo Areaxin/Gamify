@@ -87,16 +87,23 @@ public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponse
 
         return Ok(new
         {
-            games = games.Select(game => new RecommendedGame(game.Id, game.Title, game.PriceCents, game.MaxPlayers,
-                game.PegiAge, AgeRatings.EsrbLabel(game.EsrbAge), game.Platforms.Where(platform =>
-                    platformIds.Contains(platform.Id) &&
-                    (platform.Id != Platform.PcId || game.MinimumPcLevel <= pcLevel))
-                    .OrderBy(platform => platform.Id).Select(platform => platform.Name).ToArray()))
+            games = games.Select(game =>
+            {
+                var store = StoreLinks.Resolve(game.StoreUrl);
+                return new RecommendedGame(game.Id, game.Title, game.PriceCents, game.MaxPlayers,
+                    game.PegiAge, AgeRatings.EsrbLabel(game.EsrbAge), game.Platforms.Where(platform =>
+                        platformIds.Contains(platform.Id) &&
+                        (platform.Id != Platform.PcId || game.MinimumPcLevel <= pcLevel))
+                        .OrderBy(platform => platform.Id).Select(platform => platform.Name).ToArray(),
+                    store?.Url, store?.Store);
+            })
         });
     }
 }
 
 public sealed record RecommendationRequest(string? Text, bool ForGroup = false);
 
+/// <param name="StoreUrl">Tik iš <see cref="StoreLinks.AllowedHosts"/> domenų; null, jei nuoroda nežinoma.</param>
 public sealed record RecommendedGame(
-    int Id, string Title, int PriceCents, int MaxPlayers, int? Pegi, string? Esrb, string[] Platforms);
+    int Id, string Title, int PriceCents, int MaxPlayers, int? Pegi, string? Esrb, string[] Platforms,
+    string? StoreUrl, string? StoreName);
