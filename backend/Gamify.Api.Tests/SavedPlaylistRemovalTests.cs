@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Gamify.Api.Controllers;
 using Gamify.Api.Data;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
@@ -32,7 +33,9 @@ public sealed class SavedPlaylistRemovalTests
             Playlist(102, "Second playlist", gameOne, gameTwo));
         await db.SaveChangesAsync();
 
-        var controller = new SavedPlaylistsController(db)
+        using var http = new HttpClient();
+        var controller = new SavedPlaylistsController(db,
+            new RecommendationTickets(new EphemeralDataProtectionProvider()), new LiveStoreClient(http))
         {
             ControllerContext = new ControllerContext
             {

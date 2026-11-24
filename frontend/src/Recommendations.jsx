@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Bookmark, ChevronDown, Gamepad2, Search, SlidersHorizontal } from 'lucide-react'
 import { api, errorMessage } from './api'
 import PlaylistGames from './PlaylistGames'
 import StoreButton from './StoreButton'
@@ -19,6 +20,14 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
   const [savingPlaylist, setSavingPlaylist] = useState(false)
   const [playlistMessage, setPlaylistMessage] = useState('')
   const [playlistError, setPlaylistError] = useState('')
+  const [showSave, setShowSave] = useState(false)
+  const [sortOrder, setSortOrder] = useState('match')
+
+  const games = result?.games ?? []
+  const sortedGames = sortOrder === 'price'
+    ? [...games].sort((a, b) => (a.priceCents ?? Infinity) - (b.priceCents ?? Infinity))
+    : games
+  const filterCount = Object.values(toRequestFilters(filters) ?? {}).filter(value => value !== null).length
 
   useEffect(() => () => activeRequest.current?.abort(), [])
   useEffect(() => {
@@ -53,6 +62,9 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
     event.preventDefault()
     setError('')
     setResult(null)
+    setShowSave(false)
+    setPlaylistMessage('')
+    setPlaylistError('')
     if (!text.trim()) {
       setError('Aprašykite, kokio žaidimo ieškote.')
       return
@@ -105,8 +117,9 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
           recommendationToken: result.recommendationToken,
         },
       })
-      setPlaylistMessage(`Grojaraštis „${saved.name}“ išsaugotas. Jį rasite profilyje.`)
+      setPlaylistMessage(`Grojaraštis „${saved.name}“ išsaugotas.`)
       setPlaylistName('')
+      setShowSave(false)
     } catch (error) {
       if (error.status === 401) onUnauthorized()
       else setPlaylistError(errorMessage(error))
@@ -116,44 +129,35 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
   }
 
   return (
-    <section className="panel">
-      <h1>Sveiki, {profile.name}!</h1>
+    <section className="search-page">
+      <header className="page-heading">
+        <h1>Rekomendacijos tau</h1>
+        <p>Aprašyk žaidimą, kurio ieškai. Pasiūlymus pritaikysime tavo platformoms.</p>
+      </header>
       {!profile.birthDate || !profile.platformIds.length ? (
-        <p>Norėdami gauti rekomendacijas, <Link to="/profile">profilyje</Link> nurodykite gimimo datą ir turimas platformas.</p>
+        <p className="panel">Norėdami gauti rekomendacijas, <Link to="/profile">profilyje</Link> nurodykite gimimo datą ir turimas platformas.</p>
       ) : (
-        <form onSubmit={search} noValidate>
-          <div className="query-templates">
-            <p>Paruošti paieškos šablonai:</p>
-
-            {templatesLoading && <p>Įkeliami šablonai...</p>}
-
-            {templatesError && (
-                <p className="error">{templatesError}</p>
-            )}
-
-            {templates.map(template => (
-                <button
-                    key={template.id}
-                    type="button"
-                    disabled={searching}
-                    onClick={() => {
-                      setText(template.text)
-                      setError('')
-                      setResult(null)
-                    }}
-                >
-                  {template.title}
-                </button>
-            ))}
-          </div>
+        <form className="panel search-form" onSubmit={search} noValidate>
           <label>
-            Kokio žaidimo ieškote?
-            <textarea rows={4} value={text} aria-describedby="description-length" placeholder="Ramus žaidimas vakarui su draugais, iki 20 €, pradedantiesiems"
+            Kokio žaidimo ieškai?
+            <textarea rows={3} value={text} aria-describedby="description-length" placeholder="Ramus žaidimas vakarui su draugais, iki 20 €, pradedantiesiems"
               disabled={searching} onChange={event => setText(event.target.value)} />
           </label>
-          <p id="description-length" className="field-note">{length} / 1000 simbolių</p>
-          <SearchFilters profile={profile} token={token} filters={filters} disabled={searching}
-            onChange={values => { setFilters(values); setError('') }} />
+          <div className="search-actions">
+            <details className="filter-menu">
+              <summary>
+                <SlidersHorizontal size={17} aria-hidden="true" />
+                Filtrai{filterCount ? ` (${filterCount})` : ''}
+                <ChevronDown size={15} aria-hidden="true" />
+              </summary>
+              <SearchFilters profile={profile} token={token} filters={filters} disabled={searching}
+                onChange={values => { setFilters(values); setError('') }} />
+            </details>
+            <span id="description-length" className="field-note">{length} / 1000</span>
+            <button type="submit" className="icon-button" disabled={searching}>
+              <Search size={17} aria-hidden="true" /> {searching ? 'Ieškoma…' : 'Ieškoti žaidimų'}
+            </button>
+          </div>
           {profile.groupBirthDates.length > 0 && (
             <label className="platform">
               <input type="checkbox" checked={forGroup} disabled={searching}
@@ -162,17 +166,31 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
             </label>
           )}
           {error && <p className="error" role="alert">{error}</p>}
-          <button type="submit" disabled={searching}>{searching ? 'Ieškoma…' : 'Ieškoti žaidimų'}</button>
-          {searching && (
-            <div className="search-progress" role="status" aria-live="polite" aria-busy="true">
-              <span className="search-spinner" aria-hidden="true" />
-              <div>
-                <strong>Ieškome žaidimų jums</strong>
-                <p>AI ieško žaidimų internete ir tikrina jų kainas. Tai gali užtrukti kelias akimirkas…</p>
-              </div>
+          <div className="query-templates">
+            <span className="field-note">Paieškos šablonai</span>
+            {templatesLoading && <span className="field-note">Įkeliami…</span>}
+            {templatesError && <p className="error" role="alert">{templatesError}</p>}
+            <div className="template-list">
+              {templates.map(template => (
+                <button key={template.id} type="button" className="secondary" disabled={searching}
+                  onClick={() => { setText(template.text); setError(''); setResult(null) }}>
+                  {template.title}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
         </form>
+      )}
+      {searching && (
+        <div className="search-progress" role="status">
+          <div className="loading-emblem" aria-hidden="true">
+            <span className="loading-ring" />
+            <Gamepad2 size={45} strokeWidth={1.65} />
+          </div>
+          <strong>Ieškome žaidimų</strong>
+          <p>Tikriname parduotuves, kainas ir platformas.</p>
+          <span className="loading-dots" aria-hidden="true"><i /><i /><i /></span>
+        </div>
       )}
       {result && result.games.length === 0 && (
         <div className="empty-playlist" role="status">
@@ -180,11 +198,26 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
           <p className="field-note">Pabandykite pakeisti nuotaiką, biudžetą arba žaidėjų skaičių.</p>
         </div>
       )}
-      {result?.games.length > 0 && (
+      {games.length > 0 && (
         <section className="recommendations">
-          <h2>Jūsų žaidimų grojaraštis</h2>
-          <PlaylistGames games={result.games} renderAction={game => <StoreButton game={game} token={token} />} />
-          <form className="save-playlist-form" onSubmit={savePlaylist}>
+          <div className="results-header">
+            <h2>Rasti žaidimai <span>{games.length}</span></h2>
+            <div className="results-actions">
+              <label className="sort-label">
+                Rikiuoti
+                <select value={sortOrder} onChange={event => setSortOrder(event.target.value)}>
+                  <option value="match">Pagal atitikimą</option>
+                  <option value="price">Pigiausi pirmiausia</option>
+                </select>
+              </label>
+              <button type="button" className="icon-button" aria-expanded={showSave}
+                onClick={() => setShowSave(value => !value)}>
+                <Bookmark size={17} aria-hidden="true" /> {showSave ? 'Atšaukti išsaugojimą' : 'Išsaugoti grojaraštį'}
+              </button>
+            </div>
+          </div>
+          {playlistMessage && <p className="playlist-message" role="status">{playlistMessage} <Link to="/playlists">Išsaugoti grojaraščiai</Link></p>}
+          {showSave && <form className="panel save-playlist-form" onSubmit={savePlaylist}>
             <label>
               Išsaugoti grojaraštį pavadinimu
               <input
@@ -197,11 +230,11 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
               />
             </label>
             {playlistError && <p className="error" role="alert">{playlistError}</p>}
-            {playlistMessage && <p role="status">{playlistMessage}</p>}
             <button type="submit" disabled={savingPlaylist}>
               {savingPlaylist ? 'Išsaugoma…' : 'Išsaugoti grojaraštį'}
             </button>
-          </form>
+          </form>}
+          <PlaylistGames games={sortedGames} renderAction={game => <StoreButton game={game} token={token} />} />
         </section>
       )}
     </section>

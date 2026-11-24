@@ -7,7 +7,7 @@ namespace Gamify.Api;
 public sealed class LiveStoreClient(HttpClient http)
 {
     private static readonly Regex JsonLd = new(
-        """<script[^>]*types*=s*["']application/ld+json["'][^>]*>(.*?)</scripts*>""",
+        """<script\b[^>]*\btype\s*=\s*["']application/ld\+json["'][^>]*>(.*?)</script\s*>""",
         RegexOptions.IgnoreCase | RegexOptions.Singleline, TimeSpan.FromSeconds(1));
 
     public async Task<StoreGameDetails?> CheckAsync(StoreLink store, CancellationToken cancellationToken)
@@ -45,17 +45,20 @@ public sealed class LiveStoreClient(HttpClient http)
                 return null;
 
             var html = await page.Content.ReadAsStringAsync(cancellationToken);
+            int? productPrice = null;
+            string? cover = null;
             foreach (Match script in JsonLd.Matches(html))
             {
                 try
                 {
                     using var json = JsonDocument.Parse(script.Groups[1].Value);
-                    if (ProductPrice(json.RootElement) is { } amount)
-                        return new StoreGameDetails(null, amount, null, 0, null);
+                    productPrice ??= ProductPrice(json.RootElement);
+                    if (store.Platform == "PlayStation")
+                        cover ??= PlayStationCover(json.RootElement);
                 }
                 catch (JsonException) { }
             }
-            return new StoreGameDetails(null, null, null, 0, null);
+            return new StoreGameDetails(null, productPrice, null, 0, cover);
         }
         catch (Exception error) when (!cancellationToken.IsCancellationRequested &&
             error is HttpRequestException or OperationCanceledException or JsonException or KeyNotFoundException
@@ -80,15 +83,33 @@ public sealed class LiveStoreClient(HttpClient http)
         if (node.ValueKind != JsonValueKind.Object)
             return null;
         if (node.TryGetProperty("@graph", out var graph)) return ProductPrice(graph);
-        if (!node.TryGetProperty("@type", out var product) || product.ValueKind != JsonValueKind.String ||
-            product.GetString() is not ("Product" or "VideoGame" or "SoftwareApplication") ||
-            !node.TryGetProperty("offers", out var offers))
+        if (!IsProduct(node) || !node.TryGetProperty("offers", out var offers))
             return null;
         if (offers.ValueKind != JsonValueKind.Array) return OfferPrice(offers);
 
         var prices = offers.EnumerateArray().Select(OfferPrice).OfType<int>().Distinct().Take(2).ToArray();
         return prices.Length == 1 ? prices[0] : null;
     }
+
+    private static string? PlayStationCover(JsonElement node)
+    {
+        if (node.ValueKind == JsonValueKind.Array)
+            return node.EnumerateArray().Select(PlayStationCover).FirstOrDefault(cover => cover is not null);
+        if (node.ValueKind != JsonValueKind.Object)
+            return null;
+        if (node.TryGetProperty("@graph", out var graph))
+            return PlayStationCover(graph);
+        if (!IsProduct(node) || !node.TryGetProperty("image", out var image) || image.ValueKind != JsonValueKind.String ||
+            !Uri.TryCreate(image.GetString(), UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps ||
+            !uri.IsDefaultPort || uri.UserInfo.Length != 0 || uri.IdnHost != "image.api.playstation.com")
+            return null;
+
+        return uri.AbsoluteUri;
+    }
+
+    private static bool IsProduct(JsonElement node) =>
+        node.TryGetProperty("@type", out var type) && type.ValueKind == JsonValueKind.String &&
+        type.GetString() is "Product" or "VideoGame" or "SoftwareApplication";
 
     private static int? OfferPrice(JsonElement node)
     {

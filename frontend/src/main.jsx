@@ -1,13 +1,24 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { Bookmark, Clock3, Gamepad2, LogOut, Search, UserRound } from 'lucide-react'
 import AuthForm from './AuthForm'
 import Profile from './Profile'
+import QueryHistory from './QueryHistory'
+import SavedPlaylists from './SavedPlaylists'
 import Recommendations from './Recommendations'
 import { api, errorMessage } from './api'
+import '@fontsource-variable/manrope'
 import './style.css'
 
 const sessionKey = 'gamify.session'
+
+const navigation = [
+  { to: '/', label: 'Paieška', icon: Search },
+  { to: '/playlists', label: 'Išsaugoti grojaraščiai', icon: Bookmark },
+  { to: '/history', label: 'Užklausų istorija', icon: Clock3 },
+  { to: '/profile', label: 'Mano profilis', icon: UserRound },
+]
 
 function loadSession() {
   try {
@@ -23,12 +34,16 @@ function App() {
   const [user, setUser] = useState(null)
   const [searchText, setSearchText] = useState('')
   const [forGroup, setForGroup] = useState(false)
-  const [status, setStatus] = useState('Tikrinamas ryšys su API…')
   const [sessionError, setSessionError] = useState('')
   const [logoutError, setLogoutError] = useState('')
   const [loggingOut, setLoggingOut] = useState(false)
   const [retry, setRetry] = useState(0)
   const navigate = useNavigate()
+  const location = useLocation()
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [location.pathname])
 
   const clearSession = useCallback(() => {
     sessionStorage.removeItem(sessionKey)
@@ -69,18 +84,6 @@ function App() {
   }
 
   useEffect(() => {
-    const request = new AbortController()
-    api('/health', { signal: request.signal })
-      .then(data => {
-        if (!request.signal.aborted) setStatus(data?.status === 'ok' ? 'API pasiekiama.' : 'API nepasiekiama.')
-      })
-      .catch(() => {
-        if (!request.signal.aborted) setStatus('API nepasiekiama.')
-      })
-    return () => request.abort()
-  }, [])
-
-  useEffect(() => {
     if (!session) return
     const request = new AbortController()
     const timeout = window.setTimeout(clearSession, Date.parse(session.expiresAt) - Date.now())
@@ -101,15 +104,35 @@ function App() {
   }, [session, clearSession, retry])
 
   return (
-    <>
-      <header className="topbar">
-        <Link className="brand" to="/">Gamify</Link>
+    <div className={user ? 'app-shell' : 'app-shell guest-shell'}>
+      <header className="sidebar">
+        <Link className="brand" to="/">
+          <span className="brand-icon"><Gamepad2 size={23} aria-hidden="true" /></span>
+          Gamify
+        </Link>
         {user && (
-          <nav aria-label="Pagrindinis meniu">
-            <Link to="/">Pradžia</Link>
-            <Link to="/profile">Profilis</Link>
-            <button type="button" className="secondary" onClick={logout} disabled={loggingOut}>Atsijungti</button>
-          </nav>
+          <>
+            <nav className="sidebar-nav" aria-label="Pagrindinis meniu">
+              {navigation.map(({ to, label, icon: Icon }) => {
+                const current = location.pathname === to
+                return (
+                  <Link key={to} to={to} aria-current={current ? 'page' : undefined}>
+                    <Icon size={18} aria-hidden="true" />
+                    {label}
+                  </Link>
+                )
+              })}
+            </nav>
+            <div className="sidebar-account">
+              <div className="account-name">
+                <span className="avatar" aria-hidden="true">{Array.from(user.name)[0]?.toLocaleUpperCase('lt')}</span>
+                <strong>{user.name}</strong>
+              </div>
+              <button type="button" className="logout-button" onClick={logout} disabled={loggingOut}>
+                <LogOut size={17} aria-hidden="true" /> Atsijungti
+              </button>
+            </div>
+          </>
         )}
       </header>
 
@@ -133,7 +156,13 @@ function App() {
                 setForGroup={setForGroup} />
             ) : <Navigate to="/login" replace />} />
             <Route path="/profile" element={user ? (
-              <Profile token={session.token} onUnauthorized={clearSession} onSave={setUser} onReuseQuery={reuseQuery} />
+              <Profile token={session.token} onUnauthorized={clearSession} onSave={setUser} />
+            ) : <Navigate to="/login" replace />} />
+            <Route path="/playlists" element={user ? (
+              <SavedPlaylists token={session.token} onUnauthorized={clearSession} />
+            ) : <Navigate to="/login" replace />} />
+            <Route path="/history" element={user ? (
+              <QueryHistory token={session.token} onUnauthorized={clearSession} onReuse={reuseQuery} />
             ) : <Navigate to="/login" replace />} />
             <Route path="/login" element={user
               ? <Navigate to="/" replace />
@@ -146,8 +175,7 @@ function App() {
         )}
       </main>
 
-      <footer role="status">{status}</footer>
-    </>
+    </div>
   )
 }
 

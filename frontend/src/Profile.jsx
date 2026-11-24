@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react'
 import { api, errorMessage } from './api'
-import QueryHistory from './QueryHistory'
-import SavedPlaylists from './SavedPlaylists'
 
 function ratingText(rating) {
   return [rating.pegi && `PEGI ${rating.pegi}`, `ESRB ${rating.esrb}`].filter(Boolean).join(' / ')
 }
 
-export default function Profile({ token, onUnauthorized, onSave, onReuseQuery }) {
+export default function Profile({ token, onUnauthorized, onSave }) {
   const [profile, setProfile] = useState(null)
   const [options, setOptions] = useState(null)
   const [error, setError] = useState('')
@@ -83,12 +81,11 @@ export default function Profile({ token, onUnauthorized, onSave, onReuseQuery })
   const hasPc = options?.platforms.some(platform => platform.name === 'PC' && profile.platformIds.includes(platform.id))
 
   return (
-    <section className="panel">
+    <section className="panel profile-panel">
       <h1>Mano profilis</h1>
       {error && <p className="error" role="alert">{error}</p>}
       {!profile && !error && <p role="status">Įkeliamas profilis…</p>}
       {profile && options && (
-        <>
         <form onSubmit={submit} noValidate>
           <label>
             Vardas
@@ -155,10 +152,7 @@ export default function Profile({ token, onUnauthorized, onSave, onReuseQuery })
           {saved && <p role="status">Profilis išsaugotas.</p>}
           <button type="submit" disabled={saving}>Išsaugoti</button>
         </form>
-        <SavedPlaylists token={token} onUnauthorized={onUnauthorized} />
-        </>
       )}
-      <QueryHistory token={token} onUnauthorized={onUnauthorized} onReuse={onReuseQuery} />
     </section>
   )
 }

@@ -108,7 +108,7 @@ export default function SavedPlaylists({ token, onUnauthorized }) {
 
   return (
     <section className="saved-playlists">
-      <h2>Išsaugoti grojaraščiai</h2>
+      <h1>Išsaugoti grojaraščiai</h1>
       {error && <p className="error" role="alert">{error}</p>}
       {loading && <p role="status">Įkeliami grojaraščiai…</p>}
       {!loading && playlists.length === 0 && <p className="field-note">Išsaugotų grojaraščių dar nėra.</p>}

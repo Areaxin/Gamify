@@ -40,7 +40,7 @@ export default function QueryHistory({ token, onUnauthorized, onReuse }) {
 
   return (
     <section className="query-history">
-      <h2>Užklausų istorija</h2>
+      <h1>Užklausų istorija</h1>
       {error && <p className="error" role="alert">{error}</p>}
       {!entries && !error && <p role="status">Įkeliama užklausų istorija…</p>}
       {entries?.length === 0 && <p>Kol kas užklausų nėra.</p>}

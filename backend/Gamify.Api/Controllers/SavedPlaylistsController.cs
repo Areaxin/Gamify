@@ -150,7 +150,7 @@ public sealed class SavedPlaylistsController(
         {
             var store = StoreLinks.Resolve(game.StoreUrl);
             var details = store is null ? null : await stores.CheckAsync(store, cancellationToken);
-            return game with { PriceCents = details?.PriceCents };
+            return game with { PriceCents = details?.PriceCents, CoverImageUrl = details?.CoverImageUrl ?? game.CoverImageUrl };
         }));
 
     private static SavedPlaylistResponse ToResponse(SavedPlaylist playlist, SavedPlaylistGame[] games) =>
