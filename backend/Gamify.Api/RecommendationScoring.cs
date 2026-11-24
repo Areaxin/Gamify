@@ -1,4 +1,3 @@
-using System.Net;
 using Gamify.Api.Data;
 
 namespace Gamify.Api;
@@ -26,11 +25,11 @@ public static class RecommendationScoring
                 : $"neatitinka „{MoodName(requestedMood)}“ nuotaikos");
         }
 
-        if (budgetCents is { } budget)
+        if (budgetCents is { } budget && game.PriceCents is { } price)
         {
             var budgetScore = budget == 0
-                ? game.PriceCents == 0 ? 100 : 0
-                : (int)Math.Clamp(Math.Round((budget - game.PriceCents) * 100m / budget,
+                ? price == 0 ? 100 : 0
+                : (int)Math.Clamp(Math.Round((budget - price) * 100m / budget,
                     MidpointRounding.AwayFromZero), 0, 100);
             factors.Add((25, budgetScore));
             reasons.Add($"kaina sudaro {budgetScore}/100 biudžeto balų");
@@ -89,49 +88,7 @@ public static class RecommendationScoring
         GameMood.Puzzle => "galvosūkių",
         GameMood.Strategy => "strateginė",
         GameMood.Party => "vakarėlio",
+        GameMood.Horror => "siaubo",
         _ => mood.ToString()
     };
-}
-
-internal static class GameCoverImages
-{
-    private const string SteamImageBase = "https://cdn.akamai.steamstatic.com/steam/apps";
-
-    private static readonly IReadOnlyDictionary<int, int> SteamAppIds = new Dictionary<int, int>
-    {
-        [1] = 413150,
-        [2] = 673950,
-        [3] = 477160,
-        [4] = 837470,
-        [5] = 914710,
-        [6] = 2707930,
-        [7] = 2230110,
-        [8] = 1135690,
-        [11] = 1672970,
-        [12] = 252950,
-        [13] = 620,
-        [14] = 2209710,
-        [15] = 550,
-        [16] = 379720
-    };
-
-    public static string For(int gameId, string title)
-    {
-        if (SteamAppIds.TryGetValue(gameId, out var appId))
-            return $"{SteamImageBase}/{appId}/library_600x900.jpg";
-
-        var safeTitle = WebUtility.HtmlEncode(title);
-        var svg = $"""
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
-              <defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#4049aa"/><stop offset="1" stop-color="#202838"/></linearGradient></defs>
-              <rect width="400" height="600" fill="url(#g)"/>
-              <circle cx="200" cy="210" r="95" fill="#ffffff" fill-opacity=".12"/>
-              <path d="M140 210h120m-60-60v120" stroke="#fff" stroke-opacity=".7" stroke-width="12"/>
-              <text x="200" y="390" fill="#fff" font-family="sans-serif" font-size="30" text-anchor="middle">{safeTitle}</text>
-              <text x="200" y="435" fill="#dce2ed" font-family="sans-serif" font-size="16" text-anchor="middle">GAMIFY REKOMENDACIJA</text>
-            </svg>
-            """;
-
-        return "data:image/svg+xml," + Uri.EscapeDataString(svg);
-    }
 }

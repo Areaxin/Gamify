@@ -2,7 +2,6 @@ using Gamify.Api.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
 
 namespace Gamify.Api.Controllers;
 
@@ -12,27 +11,23 @@ namespace Gamify.Api.Controllers;
 /// </summary>
 [ApiController]
 [Authorize]
-[Route("api/games/{gameId:int}/store-clicks")]
+[Route("api/store-clicks")]
 public sealed class StoreClicksController(GamifyDbContext db) : ControllerBase
 {
     [HttpPost]
     [EnableRateLimiting("store-clicks")]
-    public async Task<IActionResult> Record(int gameId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Record(StoreClickRequest request, CancellationToken cancellationToken)
     {
         if (!JwtSessions.TryReadClaims(User, out var userId, out _))
             return Unauthorized();
 
-        var game = await db.Games.AsNoTracking().Where(game => game.Id == gameId)
-            .Select(game => new { game.StoreUrl }).SingleOrDefaultAsync(cancellationToken);
-        if (game is null)
-            return NotFound(new { message = "Žaidimas nerastas." });
-        if (StoreLinks.Resolve(game.StoreUrl) is not { } link)
+        if (request.StoreUrl is not { Length: <= 500 } || StoreLinks.Resolve(request.StoreUrl) is not { } link)
             return NotFound(new { message = "Šis žaidimas neturi patvirtintos parduotuvės nuorodos." });
 
         db.StoreClicks.Add(new StoreClick
         {
             UserId = userId,
-            GameId = gameId,
+            StoreUrl = link.Url,
             Store = link.Store,
             ClickedAt = DateTime.UtcNow
         });
@@ -41,3 +36,5 @@ public sealed class StoreClicksController(GamifyDbContext db) : ControllerBase
         return NoContent();
     }
 }
+
+public sealed record StoreClickRequest(string? StoreUrl);

@@ -7,7 +7,6 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
     public DbSet<User> Users => Set<User>();
     public DbSet<Platform> Platforms => Set<Platform>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
-    public DbSet<Game> Games => Set<Game>();
     public DbSet<QueryTemplate> QueryTemplates => Set<QueryTemplate>();
     public DbSet<QueryHistoryEntry> QueryHistory => Set<QueryHistoryEntry>();
     public DbSet<StoreClick> StoreClicks => Set<StoreClick>();
@@ -33,8 +32,6 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
             .HasForeignKey(playlist => playlist.UserId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<SavedPlaylist>().Property(playlist => playlist.Name).HasMaxLength(100);
 
-        GameCatalog.Seed(modelBuilder);
-
         modelBuilder.Entity<UserSession>().HasOne<User>().WithMany()
             .HasForeignKey(session => session.UserId);
         modelBuilder.Entity<UserSession>().HasIndex(session => session.ExpiresAt);
@@ -43,11 +40,12 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
             .HasForeignKey(entry => entry.UserId);
         modelBuilder.Entity<QueryHistoryEntry>().Property(entry => entry.Text).HasMaxLength(1000);
         modelBuilder.Entity<QueryHistoryEntry>().HasIndex(entry => new { entry.UserId, entry.CreatedAt, entry.Id });
+        modelBuilder.Entity<QueryHistoryEntry>().HasIndex(entry => new { entry.UserId, entry.Text, entry.ForGroup }).IsUnique();
 
         modelBuilder.Entity<StoreClick>().HasOne<User>().WithMany().HasForeignKey(click => click.UserId);
-        modelBuilder.Entity<StoreClick>().HasOne<Game>().WithMany().HasForeignKey(click => click.GameId);
         modelBuilder.Entity<StoreClick>().Property(click => click.Store).HasMaxLength(40);
-        modelBuilder.Entity<StoreClick>().HasIndex(click => new { click.GameId, click.ClickedAt });
+        modelBuilder.Entity<StoreClick>().Property(click => click.StoreUrl).HasMaxLength(500);
+        modelBuilder.Entity<StoreClick>().HasIndex(click => new { click.StoreUrl, click.ClickedAt });
         
 modelBuilder.Entity<QueryTemplate>().HasData(
     new QueryTemplate

@@ -17,516 +17,6 @@ namespace Gamify.Api.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.15");
 
-            modelBuilder.Entity("GamePlatforms", b =>
-                {
-                    b.Property<int>("GameId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("PlatformsId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("GameId", "PlatformsId");
-
-                    b.HasIndex("PlatformsId");
-
-                    b.ToTable("GamePlatforms");
-
-                    b.HasData(
-                        new
-                        {
-                            GameId = 1,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 1,
-                            PlatformsId = 2
-                        },
-                        new
-                        {
-                            GameId = 1,
-                            PlatformsId = 3
-                        },
-                        new
-                        {
-                            GameId = 1,
-                            PlatformsId = 4
-                        },
-                        new
-                        {
-                            GameId = 2,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 2,
-                            PlatformsId = 2
-                        },
-                        new
-                        {
-                            GameId = 2,
-                            PlatformsId = 3
-                        },
-                        new
-                        {
-                            GameId = 2,
-                            PlatformsId = 4
-                        },
-                        new
-                        {
-                            GameId = 3,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 3,
-                            PlatformsId = 2
-                        },
-                        new
-                        {
-                            GameId = 3,
-                            PlatformsId = 3
-                        },
-                        new
-                        {
-                            GameId = 3,
-                            PlatformsId = 4
-                        },
-                        new
-                        {
-                            GameId = 4,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 4,
-                            PlatformsId = 2
-                        },
-                        new
-                        {
-                            GameId = 4,
-                            PlatformsId = 3
-                        },
-                        new
-                        {
-                            GameId = 4,
-                            PlatformsId = 4
-                        },
-                        new
-                        {
-                            GameId = 5,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 5,
-                            PlatformsId = 2
-                        },
-                        new
-                        {
-                            GameId = 5,
-                            PlatformsId = 3
-                        },
-                        new
-                        {
-                            GameId = 5,
-                            PlatformsId = 4
-                        },
-                        new
-                        {
-                            GameId = 6,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 6,
-                            PlatformsId = 4
-                        },
-                        new
-                        {
-                            GameId = 7,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 7,
-                            PlatformsId = 4
-                        },
-                        new
-                        {
-                            GameId = 8,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 8,
-                            PlatformsId = 2
-                        },
-                        new
-                        {
-                            GameId = 8,
-                            PlatformsId = 3
-                        },
-                        new
-                        {
-                            GameId = 8,
-                            PlatformsId = 4
-                        },
-                        new
-                        {
-                            GameId = 9,
-                            PlatformsId = 4
-                        },
-                        new
-                        {
-                            GameId = 10,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 10,
-                            PlatformsId = 2
-                        },
-                        new
-                        {
-                            GameId = 10,
-                            PlatformsId = 3
-                        },
-                        new
-                        {
-                            GameId = 10,
-                            PlatformsId = 4
-                        },
-                        new
-                        {
-                            GameId = 11,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 11,
-                            PlatformsId = 2
-                        },
-                        new
-                        {
-                            GameId = 11,
-                            PlatformsId = 3
-                        },
-                        new
-                        {
-                            GameId = 11,
-                            PlatformsId = 4
-                        },
-                        new
-                        {
-                            GameId = 12,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 12,
-                            PlatformsId = 2
-                        },
-                        new
-                        {
-                            GameId = 12,
-                            PlatformsId = 3
-                        },
-                        new
-                        {
-                            GameId = 12,
-                            PlatformsId = 4
-                        },
-                        new
-                        {
-                            GameId = 13,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 13,
-                            PlatformsId = 4
-                        },
-                        new
-                        {
-                            GameId = 14,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 14,
-                            PlatformsId = 4
-                        },
-                        new
-                        {
-                            GameId = 15,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 16,
-                            PlatformsId = 1
-                        },
-                        new
-                        {
-                            GameId = 16,
-                            PlatformsId = 2
-                        },
-                        new
-                        {
-                            GameId = 16,
-                            PlatformsId = 3
-                        },
-                        new
-                        {
-                            GameId = 16,
-                            PlatformsId = 4
-                        });
-                });
-
-            modelBuilder.Entity("Gamify.Api.Data.Game", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Difficulty")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("EsrbAge")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("MaxPlayers")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("MinimumPcLevel")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Moods")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("PegiAge")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("PriceCents")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("StoreUrl")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Games");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Difficulty = 1,
-                            EsrbAge = 10,
-                            MaxPlayers = 4,
-                            MinimumPcLevel = 1,
-                            Moods = 1,
-                            PegiAge = 12,
-                            PriceCents = 1399,
-                            StoreUrl = "https://store.steampowered.com/app/413150/",
-                            Title = "Stardew Valley"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Difficulty = 1,
-                            MaxPlayers = 4,
-                            MinimumPcLevel = 1,
-                            Moods = 1,
-                            PegiAge = 3,
-                            PriceCents = 1999,
-                            StoreUrl = "https://store.steampowered.com/app/673950/",
-                            Title = "Farm Together"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Difficulty = 1,
-                            EsrbAge = 0,
-                            MaxPlayers = 4,
-                            MinimumPcLevel = 1,
-                            Moods = 17,
-                            PegiAge = 3,
-                            PriceCents = 1999,
-                            StoreUrl = "https://store.steampowered.com/app/477160/",
-                            Title = "Human Fall Flat"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Difficulty = 1,
-                            EsrbAge = 0,
-                            MaxPlayers = 2,
-                            MinimumPcLevel = 1,
-                            Moods = 17,
-                            PegiAge = 3,
-                            PriceCents = 1999,
-                            StoreUrl = "https://store.steampowered.com/app/837470/",
-                            Title = "Untitled Goose Game"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Difficulty = 1,
-                            EsrbAge = 10,
-                            MaxPlayers = 2,
-                            MinimumPcLevel = 1,
-                            Moods = 3,
-                            PegiAge = 7,
-                            PriceCents = 1499,
-                            StoreUrl = "https://store.steampowered.com/app/914710/",
-                            Title = "Cat Quest II"
-                        },
-                        new
-                        {
-                            Id = 6,
-                            Difficulty = 1,
-                            EsrbAge = 10,
-                            MaxPlayers = 4,
-                            MinimumPcLevel = 2,
-                            Moods = 3,
-                            PegiAge = 12,
-                            PriceCents = 0,
-                            StoreUrl = "https://store.steampowered.com/app/2707930/",
-                            Title = "Palia"
-                        },
-                        new
-                        {
-                            Id = 7,
-                            Difficulty = 1,
-                            EsrbAge = 10,
-                            MaxPlayers = 4,
-                            MinimumPcLevel = 2,
-                            Moods = 3,
-                            PegiAge = 7,
-                            PriceCents = 2999,
-                            Title = "Fae Farm"
-                        },
-                        new
-                        {
-                            Id = 8,
-                            Difficulty = 1,
-                            EsrbAge = 0,
-                            MaxPlayers = 1,
-                            MinimumPcLevel = 1,
-                            Moods = 17,
-                            PegiAge = 3,
-                            PriceCents = 1999,
-                            StoreUrl = "https://store.steampowered.com/app/1135690/",
-                            Title = "Unpacking"
-                        },
-                        new
-                        {
-                            Id = 9,
-                            Difficulty = 1,
-                            EsrbAge = 0,
-                            MaxPlayers = 4,
-                            Moods = 17,
-                            PegiAge = 3,
-                            PriceCents = 1999,
-                            Title = "Snipperclips"
-                        },
-                        new
-                        {
-                            Id = 10,
-                            Difficulty = 1,
-                            EsrbAge = 10,
-                            MaxPlayers = 4,
-                            MinimumPcLevel = 2,
-                            Moods = 3,
-                            PegiAge = 7,
-                            PriceCents = 2999,
-                            Title = "Minecraft"
-                        },
-                        new
-                        {
-                            Id = 11,
-                            Difficulty = 1,
-                            EsrbAge = 10,
-                            MaxPlayers = 4,
-                            MinimumPcLevel = 2,
-                            Moods = 6,
-                            PegiAge = 7,
-                            PriceCents = 1999,
-                            StoreUrl = "https://store.steampowered.com/app/1672970/",
-                            Title = "Minecraft Dungeons"
-                        },
-                        new
-                        {
-                            Id = 12,
-                            Difficulty = 2,
-                            EsrbAge = 0,
-                            MaxPlayers = 4,
-                            MinimumPcLevel = 2,
-                            Moods = 72,
-                            PegiAge = 3,
-                            PriceCents = 0,
-                            StoreUrl = "https://store.epicgames.com/p/rocket-league",
-                            Title = "Rocket League"
-                        },
-                        new
-                        {
-                            Id = 13,
-                            Difficulty = 2,
-                            EsrbAge = 10,
-                            MaxPlayers = 2,
-                            MinimumPcLevel = 1,
-                            Moods = 16,
-                            PegiAge = 12,
-                            PriceCents = 975,
-                            StoreUrl = "https://store.steampowered.com/app/620/",
-                            Title = "Portal 2"
-                        },
-                        new
-                        {
-                            Id = 14,
-                            Difficulty = 2,
-                            EsrbAge = 13,
-                            MaxPlayers = 2,
-                            MinimumPcLevel = 1,
-                            Moods = 48,
-                            PriceCents = 2999,
-                            StoreUrl = "https://store.epicgames.com/p/world-of-goo-2",
-                            Title = "World of Goo 2"
-                        },
-                        new
-                        {
-                            Id = 15,
-                            Difficulty = 2,
-                            EsrbAge = 17,
-                            MaxPlayers = 4,
-                            MinimumPcLevel = 1,
-                            Moods = 4,
-                            PegiAge = 18,
-                            PriceCents = 975,
-                            StoreUrl = "https://store.steampowered.com/app/550/",
-                            Title = "Left 4 Dead 2"
-                        },
-                        new
-                        {
-                            Id = 16,
-                            Difficulty = 3,
-                            EsrbAge = 17,
-                            MaxPlayers = 1,
-                            MinimumPcLevel = 3,
-                            Moods = 4,
-                            PegiAge = 18,
-                            PriceCents = 1999,
-                            StoreUrl = "https://store.steampowered.com/app/379720/",
-                            Title = "DOOM (2016)"
-                        });
-                });
-
             modelBuilder.Entity("Gamify.Api.Data.GroupMember", b =>
                 {
                     b.Property<int>("Id")
@@ -592,6 +82,9 @@ namespace Gamify.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("ForGroup")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Text")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -603,6 +96,9 @@ namespace Gamify.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("UserId", "CreatedAt", "Id");
+
+                    b.HasIndex("UserId", "Text", "ForGroup")
+                        .IsUnique();
 
                     b.ToTable("QueryHistory");
                 });
@@ -674,35 +170,6 @@ namespace Gamify.Api.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Gamify.Api.Data.StoreClick", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("ClickedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("GameId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Store")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("GameId", "ClickedAt");
-
-                    b.ToTable("StoreClicks");
-                });
-
             modelBuilder.Entity("Gamify.Api.Data.SavedPlaylist", b =>
                 {
                     b.Property<int>("Id")
@@ -729,6 +196,39 @@ namespace Gamify.Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("SavedPlaylists");
+                });
+
+            modelBuilder.Entity("Gamify.Api.Data.StoreClick", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("ClickedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("GameId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Store")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StoreUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("StoreUrl", "ClickedAt");
+
+                    b.ToTable("StoreClicks");
                 });
 
             modelBuilder.Entity("Gamify.Api.Data.User", b =>
@@ -806,21 +306,6 @@ namespace Gamify.Api.Migrations
                     b.ToTable("UserPlatforms");
                 });
 
-            modelBuilder.Entity("GamePlatforms", b =>
-                {
-                    b.HasOne("Gamify.Api.Data.Game", null)
-                        .WithMany()
-                        .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Gamify.Api.Data.Platform", null)
-                        .WithMany()
-                        .HasForeignKey("PlatformsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("Gamify.Api.Data.GroupMember", b =>
                 {
                     b.HasOne("Gamify.Api.Data.User", null)
@@ -839,25 +324,19 @@ namespace Gamify.Api.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Gamify.Api.Data.StoreClick", b =>
+            modelBuilder.Entity("Gamify.Api.Data.SavedPlaylist", b =>
                 {
-                    b.HasOne("Gamify.Api.Data.Game", null)
-                        .WithMany()
-                        .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Gamify.Api.Data.User", null)
-                        .WithMany()
+                        .WithMany("SavedPlaylists")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Gamify.Api.Data.SavedPlaylist", b =>
+            modelBuilder.Entity("Gamify.Api.Data.StoreClick", b =>
                 {
                     b.HasOne("Gamify.Api.Data.User", null)
-                        .WithMany("SavedPlaylists")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

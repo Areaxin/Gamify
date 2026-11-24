@@ -12,8 +12,8 @@ public sealed class SavedPlaylist
 public sealed record SavedPlaylistGame(
     int Id,
     string Title,
-    string CoverImageUrl,
-    int PriceCents,
+    string? CoverImageUrl,
+    int? PriceCents,
     string[] Platforms,
     int MatchPercentage,
     string Explanation,
@@ -21,4 +21,6 @@ public sealed record SavedPlaylistGame(
     int? Pegi,
     string? Esrb,
     string? StoreUrl,
-    string? StoreName);
+    string? StoreName,
+    string? RatingUrl = null,
+    int? MinimumPcLevel = null);

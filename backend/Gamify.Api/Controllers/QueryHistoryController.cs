@@ -23,6 +23,7 @@ public sealed class QueryHistoryController(GamifyDbContext db) : ControllerBase
             {
                 entry.Id,
                 entry.Text,
+                entry.ForGroup,
                 CreatedAt = DateTime.SpecifyKind(entry.CreatedAt, DateTimeKind.Utc)
             })
             .ToListAsync(cancellationToken);

@@ -5,7 +5,8 @@ public sealed class StoreClick
 {
     public long Id { get; set; }
     public int UserId { get; set; }
-    public int GameId { get; set; }
+    public int? GameId { get; set; }
+    public string? StoreUrl { get; set; }
     public string Store { get; set; } = "";
     public DateTime ClickedAt { get; set; }
 }

@@ -13,7 +13,8 @@ namespace Gamify.Api.Controllers;
 [Authorize]
 [Route("api/recommendations")]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponsesClient ai) : ControllerBase
+public sealed class RecommendationsController(
+    GamifyDbContext db, OpenAiResponsesClient ai, LiveRecommendations search, RecommendationTickets tickets) : ControllerBase
 {
     [HttpPost]
     [EnableRateLimiting("recommendations")]
@@ -47,12 +48,13 @@ public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponse
             ? user.GroupMembers.Select(member => member.BirthDate).Append(birthDate).Max()
             : birthDate;
         var age = AgeRatings.AgeOn(youngest, AgeRatings.Today);
-        RecommendationPrompt filters;
+        var groupSize = request.ForGroup ? user.GroupMembers.Count + 1 : 1;
+        SavedPlaylistGame[] recommendations;
         try
         {
-            var text = await ai.GetStructuredTextAsync(searchText, RecommendationPrompt.Instructions,
-                "game_filters", RecommendationPrompt.Schema, cancellationToken);
-            filters = RecommendationPrompt.Parse(text);
+            recommendations = await search.SearchAsync(searchText,
+                user.Platforms.Select(platform => platform.Name).ToArray(), PcSpecs.Rank(user.PcLevel),
+                age, groupSize, cancellationToken);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -61,48 +63,15 @@ public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponse
         catch (Exception error) when (error is HttpRequestException or JsonException or InvalidOperationException
             or KeyNotFoundException or FormatException)
         {
-            return StatusCode(502, new { message = "Nepavyko išanalizuoti aprašymo. Pabandykite dar kartą." });
+            return StatusCode(502, new { message = "Nepavyko gauti žaidimų iš interneto paieškos. Pabandykite dar kartą." });
         }
 
-        var platformIds = user.Platforms.Select(platform => platform.Id).ToArray();
-        var pcLevel = PcSpecs.Rank(user.PcLevel);
-        var query = db.Games.AsNoTracking().Where(game =>
-            (game.PegiAge != null || game.EsrbAge != null) &&
-            (game.PegiAge == null || game.PegiAge <= age) &&
-            (game.EsrbAge == null || game.EsrbAge <= age) &&
-            game.Platforms.Any(platform => platformIds.Contains(platform.Id) &&
-                (platform.Id != Platform.PcId || game.MinimumPcLevel <= pcLevel)));
-
-        if (filters.MaxBudgetCents is { } budget)
-            query = query.Where(game => game.PriceCents <= budget);
-        var groupSize = request.ForGroup ? user.GroupMembers.Count + 1 : 1;
-        var playerCount = Math.Max(filters.PlayerCount ?? 1, groupSize);
-        query = query.Where(game => game.MaxPlayers >= playerCount);
-
-        var games = await query.Include(game => game.Platforms).ToListAsync(cancellationToken);
-        int? requestedPlayerCount = filters.PlayerCount is not null || request.ForGroup ? playerCount : null;
-        var recommendations = games.Select(game =>
-            {
-                var match = RecommendationScoring.Calculate(game, filters.Mood, filters.MaxBudgetCents,
-                    requestedPlayerCount, filters.Experience);
-                var platforms = game.Platforms.Where(platform =>
-                        platformIds.Contains(platform.Id) &&
-                        (platform.Id != Platform.PcId || game.MinimumPcLevel <= pcLevel))
-                    .OrderBy(platform => platform.Id).Select(platform => platform.Name).ToArray();
-                var store = StoreLinks.Resolve(game.StoreUrl);
-
-                return new RecommendedGame(game.Id, game.Title, GameCoverImages.For(game.Id, game.Title),
-                    game.PriceCents, platforms, match.Percentage, match.Explanation, game.MaxPlayers, game.PegiAge,
-                    AgeRatings.EsrbLabel(game.EsrbAge), store?.Url, store?.Store);
-            })
-            .OrderByDescending(game => game.MatchPercentage)
-            .ThenBy(game => game.Title)
-            .ThenBy(game => game.Id)
-            .Take(10)
-            .ToArray();
-
-        db.QueryHistory.Add(new QueryHistoryEntry { UserId = userId, Text = searchText, CreatedAt = searchedAt });
-        await db.SaveChangesAsync(cancellationToken);
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "QueryHistory" ("UserId", "Text", "ForGroup", "CreatedAt")
+            VALUES ({userId}, {searchText}, {request.ForGroup}, {searchedAt})
+            ON CONFLICT ("UserId", "Text", "ForGroup") DO UPDATE SET
+                "CreatedAt" = MAX("QueryHistory"."CreatedAt", excluded."CreatedAt")
+            """, cancellationToken);
 
         if (recommendations.Length == 0)
             return Ok(new
@@ -111,13 +80,8 @@ public sealed class RecommendationsController(GamifyDbContext db, OpenAiResponse
                 message = "Nieko nerasta."
             });
 
-        return Ok(new { games = recommendations });
+        return Ok(new { games = recommendations, recommendationToken = tickets.Create(userId, recommendations) });
     }
 }
 
 public sealed record RecommendationRequest(string? Text, bool ForGroup = false);
-
-/// <param name="StoreUrl">Tik iš <see cref="StoreLinks.AllowedHosts"/> domenų; null, jei nuoroda nežinoma.</param>
-public sealed record RecommendedGame(
-    int Id, string Title, string CoverImageUrl, int PriceCents, string[] Platforms, int MatchPercentage,
-    string Explanation, int MaxPlayers, int? Pegi, string? Esrb, string? StoreUrl, string? StoreName);

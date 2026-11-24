@@ -15,6 +15,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddMemoryCache();
+builder.Services.AddDataProtection();
+builder.Services.AddSingleton<RecommendationTickets>();
+builder.Services.AddTransient<LiveRecommendations>();
+builder.Services.AddHttpClient<LiveStoreClient>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(6);
+    client.MaxResponseContentBufferSize = 4 * 1024 * 1024;
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -104,11 +112,10 @@ builder.Services.AddDbContext<GamifyDbContext>(options => options.UseSqlite(sqli
 
 builder.Services.AddSingleton<IOptions<AiOptions>>(
     Options.Create(AiOptions.Load(builder.Environment.ContentRootPath)));
-builder.Services.AddHttpClient<OpenAiResponsesClient>((services, client) =>
+builder.Services.AddHttpClient<OpenAiResponsesClient>(client =>
 {
-    var options = services.GetRequiredService<IOptions<AiOptions>>().Value;
     client.BaseAddress = new Uri("https://api.openai.com/v1/");
-    client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+    client.Timeout = Timeout.InfiniteTimeSpan;
 }).RedactLoggedHeaders(["Authorization"]);
 
 var app = builder.Build();
