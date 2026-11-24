@@ -7,16 +7,32 @@ namespace Gamify.Api;
 public sealed class LiveRecommendations(OpenAiResponsesClient ai, LiveStoreClient stores, ILogger<LiveRecommendations> logger)
 {
     public async Task<SavedPlaylistGame[]> SearchAsync(
-        string text, string[] platforms, int pcLevel, int age, int groupSize, CancellationToken cancellationToken)
+        string text, string[] platforms, int pcLevel, int age, int groupSize, CancellationToken cancellationToken,
+        FilterOverrides? overrides = null)
     {
         var ratings = AgeRatings.ForAge(age);
         var input = JsonSerializer.Serialize(new
         {
             query = text, platforms, pcLevel, maxPegi = ratings.Pegi, maxEsrb = ratings.Esrb,
-            requireAgeRating = age < 18, minimumPlayers = groupSize
+            requireAgeRating = age < 18, minimumPlayers = Math.Max(overrides?.PlayerCount ?? 1, groupSize),
+            filters = overrides is null ? null : new
+            {
+                maxBudgetCents = overrides.MaxBudgetCents, playerCount = overrides.PlayerCount,
+                experience = overrides.ExperienceName
+            }
         });
         var response = await ai.SearchAsync(input, WebGameSearch.Instructions, WebGameSearch.Schema, cancellationToken);
-        var result = WebGameSearch.Parse(response.Text);
+        var parsed = WebGameSearch.Parse(response.Text);
+        // GAM-US13: aiškus filtras laimi prieš iš teksto išgautą reikšmę.
+        var result = overrides is null ? parsed : parsed with
+        {
+            Filters = parsed.Filters with
+            {
+                MaxBudgetCents = overrides.MaxBudgetCents ?? parsed.Filters.MaxBudgetCents,
+                PlayerCount = overrides.PlayerCount ?? parsed.Filters.PlayerCount,
+                Experience = overrides.ExperienceName ?? parsed.Filters.Experience
+            }
+        };
         var sources = response.Sources.Select(SourceKey).OfType<string>().ToHashSet(StringComparer.Ordinal);
         var products = response.Sources.Select(StoreLinks.Resolve).OfType<StoreLink>()
             .Select(store => store.Url).ToHashSet(StringComparer.Ordinal);
@@ -72,6 +88,8 @@ public sealed class LiveRecommendations(OpenAiResponsesClient ai, LiveStoreClien
                 game.Pegi > age || game.Esrb > age || game.MaxPlayers < players)
                 return false;
             if (store.Platform == "PC" && (game.MinimumPcLevel ?? 3) > pcLevel)
+                return false;
+            if (overrides?.Experience is { } level && game.Difficulty > (int)level)
                 return false;
 
             return !Enum.TryParse<GameMood>(result.Filters.Mood, true, out var mood) || (game.Moods & mood) != 0;

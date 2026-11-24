@@ -3,8 +3,15 @@ import { Link } from 'react-router-dom'
 import { api, errorMessage } from './api'
 import PlaylistGames from './PlaylistGames'
 import StoreButton from './StoreButton'
+import SearchFilters, { emptyFilters, toRequestFilters, validateFilters } from './SearchFilters'
 
+<<<<<<< HEAD
 export default function Recommendations({ profile, token, onUnauthorized, text, setText, forGroup, setForGroup }) {
+=======
+export default function Recommendations({ profile, token, onUnauthorized, text, setText }) {
+  const [forGroup, setForGroup] = useState(false)
+  const [filters, setFilters] = useState(emptyFilters)
+>>>>>>> origin/feature/GAM-US13
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [searching, setSearching] = useState(false)
@@ -59,6 +66,11 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
       setError('Aprašymas negali viršyti 1000 simbolių.')
       return
     }
+    const filterError = validateFilters(filters)
+    if (filterError) {
+      setError(filterError)
+      return
+    }
 
     const request = new AbortController()
     activeRequest.current = request
@@ -67,7 +79,7 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
       setResult(await api('/api/recommendations', {
         method: 'POST',
         token,
-        body: { text, forGroup },
+        body: { text, forGroup, filters: toRequestFilters(filters) },
         signal: request.signal,
       }))
     } catch (error) {
@@ -114,7 +126,7 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
       {!profile.birthDate || !profile.platformIds.length ? (
         <p>Norėdami gauti rekomendacijas, <Link to="/profile">profilyje</Link> nurodykite gimimo datą ir turimas platformas.</p>
       ) : (
-        <form onSubmit={search}>
+        <form onSubmit={search} noValidate>
           <div className="query-templates">
             <p>Paruošti paieškos šablonai:</p>
 
@@ -145,6 +157,8 @@ export default function Recommendations({ profile, token, onUnauthorized, text, 
               disabled={searching} onChange={event => setText(event.target.value)} />
           </label>
           <p id="description-length" className="field-note">{length} / 1000 simbolių</p>
+          <SearchFilters profile={profile} token={token} filters={filters} disabled={searching}
+            onChange={values => { setFilters(values); setError('') }} />
           {profile.groupBirthDates.length > 0 && (
             <label className="platform">
               <input type="checkbox" checked={forGroup} disabled={searching}

@@ -28,6 +28,9 @@ public sealed class RecommendationsController(
         if (request.Text.EnumerateRunes().Count() > 1000)
             return BadRequest(new { message = "Aprašymas negali viršyti 1000 simbolių." });
 
+        if (request.Filters?.Validate() is { } filterError)
+            return BadRequest(new { message = filterError });
+
         var searchText = request.Text.Trim();
         var searchedAt = DateTime.UtcNow;
 
@@ -49,12 +52,30 @@ public sealed class RecommendationsController(
             : birthDate;
         var age = AgeRatings.AgeOn(youngest, AgeRatings.Today);
         var groupSize = request.ForGroup ? user.GroupMembers.Count + 1 : 1;
+
+        // GAM-US13: filtre galima pasirinkti bet kurią platformą; nepasirinkus ieškoma profilio platformose.
+        var platforms = user.Platforms;
+        var pcLevel = PcSpecs.Rank(user.PcLevel);
+        if (request.Filters?.PlatformIds is { Length: > 0 } selectedIds)
+        {
+            var distinctIds = selectedIds.Distinct().ToArray();
+            platforms = await db.Platforms.AsNoTracking().Where(platform => distinctIds.Contains(platform.Id))
+                .OrderBy(platform => platform.Id).ToListAsync(cancellationToken);
+            if (platforms.Count != distinctIds.Length)
+                return BadRequest(new { message = "Pasirinkta nežinoma platforma." });
+            // PC pasirinktas filtru, bet profilyje PC specifikacijų nėra: kompiuterio galingumo neribojame.
+            if (pcLevel == 0 && distinctIds.Contains(Platform.PcId))
+                pcLevel = PcSpecs.Levels.Length;
+        }
+        var overrides = request.Filters is { } filters
+            ? new FilterOverrides(filters.MaxBudgetCents, filters.PlayerCount, filters.ExperienceLevelValue)
+            : null;
         SavedPlaylistGame[] recommendations;
         try
         {
             recommendations = await search.SearchAsync(searchText,
-                user.Platforms.Select(platform => platform.Name).ToArray(), PcSpecs.Rank(user.PcLevel),
-                age, groupSize, cancellationToken);
+                platforms.Select(platform => platform.Name).ToArray(), pcLevel,
+                age, groupSize, cancellationToken, overrides);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -84,4 +105,4 @@ public sealed class RecommendationsController(
     }
 }
 
-public sealed record RecommendationRequest(string? Text, bool ForGroup = false);
+public sealed record RecommendationRequest(string? Text, bool ForGroup = false, RecommendationFilters? Filters = null);
