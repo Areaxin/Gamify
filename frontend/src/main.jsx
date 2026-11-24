@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { Bookmark, Clock3, Gamepad2, LogOut, Search, UserRound } from 'lucide-react'
+import { Bookmark, Clock3, Gamepad2, LogOut, Search, ShieldCheck, UserRound } from 'lucide-react'
+import AdminUsers from './AdminUsers'
 import AuthForm from './AuthForm'
 import Profile from './Profile'
 import QueryHistory from './QueryHistory'
@@ -18,6 +19,7 @@ const navigation = [
   { to: '/playlists', label: 'Išsaugoti grojaraščiai', icon: Bookmark },
   { to: '/history', label: 'Užklausų istorija', icon: Clock3 },
   { to: '/profile', label: 'Mano profilis', icon: UserRound },
+  { to: '/admin/users', label: 'Administravimas', icon: ShieldCheck, adminOnly: true },
 ]
 
 function loadSession() {
@@ -113,7 +115,7 @@ function App() {
         {user && (
           <>
             <nav className="sidebar-nav" aria-label="Pagrindinis meniu">
-              {navigation.map(({ to, label, icon: Icon }) => {
+              {navigation.filter(item => !item.adminOnly || user.isAdmin).map(({ to, label, icon: Icon }) => {
                 const current = location.pathname === to
                 return (
                   <Link key={to} to={to} aria-current={current ? 'page' : undefined}>
@@ -164,6 +166,14 @@ function App() {
             <Route path="/history" element={user ? (
               <QueryHistory token={session.token} onUnauthorized={clearSession} onReuse={reuseQuery} />
             ) : <Navigate to="/login" replace />} />
+            <Route path="/admin/users" element={user?.isAdmin ? (
+              <AdminUsers token={session.token} currentEmail={user.email}
+                onUnauthorized={clearSession}
+                onAccountDeleted={() => {
+                  clearSession()
+                  navigate('/login', { replace: true })
+                }} />
+            ) : <Navigate to="/" replace />} />
             <Route path="/login" element={user
               ? <Navigate to="/" replace />
               : <AuthForm key="login" onLogin={login} />} />

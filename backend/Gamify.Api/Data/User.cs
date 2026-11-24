@@ -7,6 +7,8 @@ public sealed class User
     public string Email { get; set; } = "";
     public string NormalizedEmail { get; set; } = "";
     public string PasswordHash { get; set; } = "";
+    public string Role { get; set; } = "User";
+    public DateTimeOffset RegisteredAt { get; set; } = DateTimeOffset.UtcNow;
     public string? PcLevel { get; set; }
     public DateOnly? BirthDate { get; set; }
     public List<Platform> Platforms { get; set; } = [];

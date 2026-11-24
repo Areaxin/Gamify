@@ -23,7 +23,7 @@ public sealed class ProfileController(GamifyDbContext db) : ControllerBase
             .Include(user => user.GroupMembers).AsSplitQuery()
             .SingleOrDefaultAsync(user => user.Id == userId, cancellationToken);
 
-        return user is null ? Unauthorized() : Ok(ProfileResponse.From(user));
+        return user is null ? Unauthorized() : Ok(ProfileResponse.From(user, user.Role == "Administrator"));
     }
 
     [HttpGet("options")]
@@ -89,7 +89,7 @@ public sealed class ProfileController(GamifyDbContext db) : ControllerBase
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        return Ok(ProfileResponse.From(user));
+        return Ok(ProfileResponse.From(user, user.Role == "Administrator"));
     }
 }
 
@@ -98,9 +98,9 @@ public sealed record UpdateProfileRequest(
 
 public sealed record ProfileResponse(
     string Name, string Email, int[] PlatformIds, string? PcLevel, DateOnly? BirthDate,
-    DateOnly[] GroupBirthDates, AgeRatings? AgeRating, AgeRatings? GroupAgeRating)
+    DateOnly[] GroupBirthDates, AgeRatings? AgeRating, AgeRatings? GroupAgeRating, bool IsAdmin)
 {
-    public static ProfileResponse From(User user)
+    public static ProfileResponse From(User user, bool isAdmin)
     {
         var groupBirthDates = user.GroupMembers.OrderBy(member => member.Id).Select(member => member.BirthDate).ToArray();
         var today = AgeRatings.Today;
@@ -113,6 +113,6 @@ public sealed record ProfileResponse(
                 groupAgeRating = AgeRatings.ForAge(AgeRatings.AgeOn(groupBirthDates.Append(birthDate).Max(), today));
         }
         return new(user.Name, user.Email, user.Platforms.Select(platform => platform.Id).Order().ToArray(), user.PcLevel,
-            user.BirthDate, groupBirthDates, ageRating, groupAgeRating);
+            user.BirthDate, groupBirthDates, ageRating, groupAgeRating, isAdmin);
     }
 }

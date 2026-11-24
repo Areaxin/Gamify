@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -42,7 +43,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
-    policy.WithOrigins("http://localhost:5173")
+    policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
         .WithMethods("GET", "POST", "PUT", "DELETE")
         .AllowAnyHeader()));
 
@@ -78,14 +79,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
             }
 
             var db = context.HttpContext.RequestServices.GetRequiredService<GamifyDbContext>();
-            var active = await db.UserSessions.AnyAsync(session => session.Id == sessionId && session.UserId == userId,
-                context.HttpContext.RequestAborted);
-            if (!active)
+            var role = await (
+                from session in db.UserSessions
+                join user in db.Users on session.UserId equals user.Id
+                where session.Id == sessionId && session.UserId == userId
+                select user.Role)
+                .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+            if (role is null)
+            {
                 context.Fail("Session ended.");
+                return;
+            }
+
+            context.Principal?.AddIdentity(new ClaimsIdentity([new Claim(ClaimTypes.Role, role)]));
         }
     };
 });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+    options.AddPolicy("Administrator", policy => policy.RequireRole("Administrator")));
 
 builder.Services.AddRateLimiter(options =>
 {

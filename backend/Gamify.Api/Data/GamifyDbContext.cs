@@ -11,6 +11,7 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
     public DbSet<QueryHistoryEntry> QueryHistory => Set<QueryHistoryEntry>();
     public DbSet<StoreClick> StoreClicks => Set<StoreClick>();
     public DbSet<SavedPlaylist> SavedPlaylists => Set<SavedPlaylist>();
+    public DbSet<AdminAuditLog> AdminAuditLogs => Set<AdminAuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -18,6 +19,7 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
         modelBuilder.Entity<User>().Property(user => user.Name).HasMaxLength(80);
         modelBuilder.Entity<User>().Property(user => user.Email).HasMaxLength(254);
         modelBuilder.Entity<User>().Property(user => user.NormalizedEmail).HasMaxLength(254);
+        modelBuilder.Entity<User>().Property(user => user.Role).HasMaxLength(32).HasDefaultValue("User");
         modelBuilder.Entity<User>().HasMany(user => user.Platforms).WithMany().UsingEntity("UserPlatforms");
 
         modelBuilder.Entity<Platform>().HasData(
@@ -46,6 +48,8 @@ public sealed class GamifyDbContext(DbContextOptions<GamifyDbContext> options) :
         modelBuilder.Entity<StoreClick>().Property(click => click.Store).HasMaxLength(40);
         modelBuilder.Entity<StoreClick>().Property(click => click.StoreUrl).HasMaxLength(500);
         modelBuilder.Entity<StoreClick>().HasIndex(click => new { click.StoreUrl, click.ClickedAt });
+
+        modelBuilder.Entity<AdminAuditLog>().HasIndex(entry => entry.OccurredAt);
         
 modelBuilder.Entity<QueryTemplate>().HasData(
     new QueryTemplate
